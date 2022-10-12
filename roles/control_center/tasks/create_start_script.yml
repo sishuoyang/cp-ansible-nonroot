@@ -1,0 +1,22 @@
+# For Non-Root
+- name: Create Start Script Directory
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ control_center_user }}"
+    group: "{{ control_center_group }}"
+    mode: 0750
+    state: directory
+  when: nonroot_deployment
+  tags:
+    - filesystem
+
+- name: Write Start Script
+  template:
+    src: control_center_start.sh.j2
+    dest: "{{ start_script_path }}/control_center_start.sh"
+    mode: 0744
+    owner: "{{ control_center_user }}"
+    group: "{{ control_center_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+  when: nonroot_deployment
+# End Non-Root

@@ -1,0 +1,22 @@
+# For Non-Root
+- name: Create Start Script Directory
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ schema_registry_user }}"
+    group: "{{ schema_registry_group }}"
+    mode: 0750
+    state: directory
+  when: nonroot_deployment
+  tags:
+    - filesystem
+
+- name: Write Start Script
+  template:
+    src: schema_registry_start.sh.j2
+    dest: "{{ start_script_path }}/schema_registry_start.sh"
+    mode: 0744
+    owner: "{{ schema_registry_user }}"
+    group: "{{ schema_registry_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+  when: nonroot_deployment
+# End Non-Root

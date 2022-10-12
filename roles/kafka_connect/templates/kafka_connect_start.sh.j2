@@ -1,0 +1,7 @@
+#! /bin/bash
+{% for key, value in kafka_connect_service_environment_overrides.items() %}
+{% if value %}
+{{key}}="{{value}}" \
+{% endif %}
+{% endfor %}
+{{ kafka_connect.server_start_file }} {{ kafka_connect.config_file }} > /dev/null 2>&1 &

@@ -1,0 +1,141 @@
+---
+- name: Start Zookeeper
+  hosts: zookeeper
+  gather_facts: false
+  tags: zookeeper
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: variables
+
+    - name: Run Zookeeper with Environment Variables
+      shell: |
+        {{ start_script_path }}/zookeeper_start.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Startup Delay (10s)
+      wait_for:
+        timeout: 10
+
+- name: Start Kafka Broker
+  hosts: kafka_broker
+  gather_facts: false
+  tags: kafka_broker
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: variables
+
+    - name: Run Kafka Broker with Environment Variables
+      shell: |
+        {{ start_script_path }}/kafka_broker_start.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Startup Delay (20s)
+      wait_for:
+        timeout: 20
+
+- name: Start Schema Registry
+  hosts: schema_registry
+  gather_facts: false
+  tags: schema_registry
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: variables
+
+    - name: Run Schema Registry with Environment Variables
+      shell: |
+        {{ start_script_path }}/schema_registry_start.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+    
+    - name: Startup Delay (15s)
+      wait_for:
+        timeout: 15
+
+
+- name: Start Kafka Connect
+  hosts: kafka_connect
+  gather_facts: false
+  tags: kafka_connect
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: variables
+
+    - name: Run Kafka Connect with Environment Variables
+      shell: |
+        {{ start_script_path }}/kafka_connect_start.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Startup Delay (30s)
+      wait_for:
+        timeout: 30
+
+- name: Start Kafka REST
+  hosts: kafka_rest
+  gather_facts: false
+  tags: kafka_rest
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: variables
+
+    - name: Run Kafka REST with Environment Variables
+      shell: |
+        {{ start_script_path }}/kafka_rest_start.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Startup Delay (15s)
+      wait_for:
+        timeout: 15
+
+- name: Start Control Center
+  hosts: control_center
+  gather_facts: false
+  tags: control_center
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: variables
+
+    - name: Run Control Center with Environment Variables
+      shell: |
+        {{ start_script_path }}/control_center_start.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Startup Delay (30s)
+      wait_for:
+        timeout: 30
+
+- name: Start ksqlDB
+  hosts: ksql
+  gather_facts: false
+  tags: ksql
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: variables
+
+    - name: Run ksqlDB with Environment Variables
+      shell: |
+        {{ start_script_path }}/ksql_start.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Startup Delay (20s)
+      wait_for:
+        timeout: 20

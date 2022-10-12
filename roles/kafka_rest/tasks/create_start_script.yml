@@ -1,0 +1,22 @@
+# For Non-Root
+- name: Create Start Script Directory
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ kafka_rest_user }}"
+    group: "{{ kafka_rest_group }}"
+    mode: 0750
+    state: directory
+  when: nonroot_deployment
+  tags:
+    - filesystem
+
+- name: Write Start Script
+  template:
+    src: kafka_rest_start.sh.j2
+    dest: "{{ start_script_path }}/kafka_rest_start.sh"
+    mode: 0744
+    owner: "{{ kafka_rest_user }}"
+    group: "{{ kafka_rest_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+  when: nonroot_deployment
+# End Non-Root

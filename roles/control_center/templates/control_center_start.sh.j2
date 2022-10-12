@@ -1,0 +1,7 @@
+#! /bin/bash
+{% for key, value in control_center_service_environment_overrides.items() %}
+{% if value %}
+{{key}}="{{value}}" \
+{% endif %}
+{% endfor %}
+{{ control_center.server_start_file }} {{ control_center.config_file }} > /dev/null 2>&1 &

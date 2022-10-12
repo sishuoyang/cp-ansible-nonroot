@@ -354,6 +354,10 @@
   tags:
     - systemd
 
+- name: (Non-root deployment) Create Start Script
+  include_tasks: create_start_script.yml
+  when: nonroot_deployment|bool
+
 - name: Certs were Updated - Trigger Restart
   command: /bin/true
   notify: restart ksql
