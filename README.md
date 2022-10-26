@@ -53,9 +53,11 @@ High-level steps as follows:
 
 * Run the playbook (see above) to set up Zookeeper, Kafka Brokers
 * At the task "Get Kafka Cluster ID from Embedded Rest Proxy":
-    * Manually start Zookeepers and Kafka Brokers
+    * Manually start Zookeepers and Kafka Brokers or use the script:
+        * `ansible-playbook -i hosts_example_nonroot.yml confluent.platform.start_components_script --tags zookeeper,kafka_broker`
 * The playbook will continue to the end
-* Start the remaining Confluent Platform components
+* Start the remaining Confluent Platform components:
+    * `ansible-playbook -i hosts_example_nonroot.yml confluent.platform.start_components_script --skip-tags zookeeper,kafka_broker`
 
 ## Introduction
 
