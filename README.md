@@ -6,15 +6,18 @@
 This fork provides some preliminaries for non-root, no sudo deployments. 
 
 ### What works and what does not
-What works:
+What works out of the box:
 
 * Basic setup and configuration of most Confluent Platform components (excluding Confluent Replicator)
 * TLS Encryption
 * SASL authentication
 
+What works but requires manual steps:
+* Role-based Access Control (RBAC) (see: https://docs.confluent.io/platform/current/security/rbac/)
+    * Refer to the section on [RBAC Setup](#rbac-setup)
+
 What is not supported, or requires additional manual steps:
 
-* Role-based Access Control
 * Confluent Replicator
 
 What should work but is not yet tested:
@@ -38,6 +41,21 @@ To start components:
 ```
 ansible-playbook -i hosts_example_nonroot.yml confluent.platform.start_components_script
 ```
+
+### RBAC Setup
+
+The playbook tasks around RBAC require that the Kafka Brokers (specifically, the embedded REST proxy) are running before they can function.
+
+In this version, we increase the number of retries around the task "Get Kafka Cluster ID from Embedded Rest Proxy" to allow the user to manually start all the Confluent Platform components (within 20 minutes), before proceeding with the playbook.
+Alternatively, the user can simply terminate the playbook (`Ctrl + C`), and restart the playbook with `--skip-tags zookeeper`.
+
+High-level steps as follows:
+
+* Run the playbook (see above) to set up Zookeeper, Kafka Brokers
+* At the task "Get Kafka Cluster ID from Embedded Rest Proxy":
+    * Manually start Zookeepers and Kafka Brokers
+* The playbook will continue to the end
+* Start the remaining Confluent Platform components
 
 ## Introduction
 
