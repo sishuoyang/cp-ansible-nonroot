@@ -67,6 +67,13 @@ all:
     # Increase MDS retries to allow time for manual service start
     mds_retries: 120
 
+    # (For RBAC) Need to Set MDS Token Keypair Explicitly
+    # Generate using the following commands:
+    #   openssl genrsa -out tokenKeypair.pem 2048
+    #   openssl rsa -in tokenKeypair.pem -outform PEM -pubout -out public.pem
+    token_services_public_pem_file: /path/to/public.pem
+    token_services_private_pem_file: /path/to/tokenKeypair.pem
+
     #### Setting Proxy Environment variables ####
     ## To set proxy env vars for the duration of playbook run, uncomment below block and set as necessary
     # proxy_env:
@@ -347,6 +354,17 @@ zookeeper:
     ip-172-31-34-231.us-east-2.compute.internal:
       # zookeeper_id: 1
 
+## For KRaft (instead of Zookeeper)
+# kafka_controller:
+#   vars: 
+#     kafka_controller_custom_properties:
+#       log.dirs: "{{ deployment_path }}/kafka_controller"
+#       # ssl.principal.mapping.rules: RULE:^.*[Cc][Nn]=([a-zA-Z0-9._-]*).*$/$1/L, DEFAULT
+#   hosts:
+#     ip-172-31-34-246.us-east-2.compute.internal:
+#     ip-172-31-37-15.us-east-2.compute.internal:
+#     ip-172-31-34-231.us-east-2.compute.internal:
+
 kafka_broker:
   vars:
     kafka_broker_custom_properties:
@@ -518,6 +536,7 @@ kafka_connect:
   vars:
     # (Non-root) Set default connector plugin path
     kafka_connect_plugins_dest: "{{ deployment_path }}/connectors"
+    kafka_connect_confluent_hub_plugins_dest: "{{ deployment_path }}/connectors/hub"
 
   ## To set variables on all kafka_connect hosts, use the vars block here
   # vars:

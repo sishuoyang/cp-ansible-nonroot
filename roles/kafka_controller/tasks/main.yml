@@ -181,7 +181,7 @@
     mode: '750'
   tags:
     - filesystem
-    - privileged
+#    - privileged
 
 - name: Set Permissions on Data Dir files  # noqa deprecated-command-syntax
   # Have to use command + chown instead of the Ansible file module here as it seems
@@ -201,7 +201,7 @@
     group: "{{kafka_controller_group}}"
   tags:
     - filesystem
-    - privileged
+#    - privileged
 
 
 - name: Create Kafka Controller Config
@@ -215,7 +215,7 @@
   diff: "{{ not mask_sensitive_diff|bool }}"
   tags:
     - configuration
-    - privileged
+#    - privileged
 
 - name: Create Kafka Controller Client Config
   template:
@@ -227,7 +227,7 @@
   diff: "{{ not mask_sensitive_diff|bool }}"
   tags:
     - configuration
-    - privileged
+#    - privileged
 
 - name: Include Kraft Cluster Data
   include_tasks: get_meta_properties.yml
@@ -242,7 +242,7 @@
   tags:
     - filesystem
     - log
-    - privileged
+#    - privileged
 
 - name: Update Kafka log4j Config for Log Cleanup
   include_role:
@@ -268,7 +268,7 @@
   tags:
     - filesystem
     - log
-    - privileged
+#    - privileged
 
 - name: Create logredactor rule file directory
   file:
@@ -278,7 +278,7 @@
   when: (kafka_controller_custom_log4j|bool) and (logredactor_enabled|bool) and (logredactor_rule_url == '')
   tags:
     - log
-    - privileged
+#    - privileged
 
 - name: Copy logredactor rule file from control node to component node
   copy:
@@ -288,7 +288,7 @@
   when: (kafka_controller_custom_log4j|bool) and (logredactor_enabled|bool) and (logredactor_rule_url == '')
   tags:
     - log
-    - privileged
+#    - privileged
 
 - name: Configure logredactor
   include_role:
@@ -323,7 +323,7 @@
   diff: "{{ not mask_sensitive_diff|bool }}"
   tags:
     - configuration
-    - privileged
+#    - privileged
 
 - name: Create Kafka Controller Jaas Config
   template:
@@ -337,7 +337,7 @@
   notify: restart Kafka Controller
   tags:
     - configuration
-    - privileged
+#    - privileged
 
 - name: Deploy JMX Exporter Config File
   template:
@@ -349,7 +349,7 @@
   when: kafka_controller_jmxexporter_enabled|bool
   tags:
     - configuration
-    - privileged
+#    - privileged
 
 - name: Create Service Override Directory
   file:
@@ -374,6 +374,10 @@
   tags:
     - systemd
     - privileged
+
+- name: (Non-root deployment) Create Start Script
+  include_tasks: create_start_script.yml
+  when: nonroot_deployment|bool
 
 - name: Create sysctl directory on Debian distributions
   file:
