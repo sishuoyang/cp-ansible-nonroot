@@ -64,6 +64,9 @@ all:
     ksql_skip_restarts: true
     control_center_skip_restarts: true
 
+    # Increase MDS retries to allow time for manual service start
+    mds_retries: 120
+
     #### Setting Proxy Environment variables ####
     ## To set proxy env vars for the duration of playbook run, uncomment below block and set as necessary
     # proxy_env:
