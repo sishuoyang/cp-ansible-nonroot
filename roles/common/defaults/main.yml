@@ -35,17 +35,20 @@ confluent_common_repository_redhat_clients_gpgcheck: 1
 confluent_common_repository_redhat_clients_gpgkey: "{{confluent_clients_repository_baseurl}}/clients/rpm/archive.key"
 confluent_common_repository_redhat_clients_enabled: 1
 
-### Boolean to have cp-ansible install Java on hosts
-install_java: true
+### Full pre-existing Java path on custom nodes. CP-Ansible will use the provided path and will skip installing java as part of execution
+custom_java_path: ""
 
-### Java Package to install on RHEL/Centos hosts. Possible values java-1.8.0-openjdk or java-11-openjdk
-redhat_java_package_name: java-11-openjdk
+### Boolean to have cp-ansible install Java on Hosts depending on custom_java_path provided
+install_java: "{{ false if custom_java_path | length > 0 else true }}"
 
-### Java Package to install on Debian hosts. Possible values openjdk-8-jdk or openjdk-11-jdk
-debian_java_package_name: openjdk-11-jdk
+### Java Package to install on RHEL/Centos hosts. Possible values java-8-openjdk, java-11-openjdk or java-17-openjdk
+redhat_java_package_name: java-17-openjdk
 
-### Java Package to install on Ubuntu hosts. Possible values openjdk-8-jdk or openjdk-11-jdk
-ubuntu_java_package_name: openjdk-11-jdk
+### Java Package to install on Debian hosts. Possible values openjdk-11-jdk, openjdk-8-jdk or openjdk-17-jdk
+debian_java_package_name: openjdk-17-jdk
+
+### Java Package to install on Ubuntu hosts. Possible values openjdk-8-jdk, openjdk-11-jdk or openjdk-17-jdk
+ubuntu_java_package_name: openjdk-17-jdk
 
 ### Deb Repository to use for Java Installation
 ubuntu_java_repository: ppa:openjdk-r/ppa
@@ -75,7 +78,7 @@ confluent_archive_file_remote: true
 confluent_cli_repository_baseurl: "https://s3-us-west-2.amazonaws.com/confluent.cloud"
 
 ### A path reference to a local archive file or URL. By default this is the URL from Confluent CLI repository.
-confluent_cli_archive_file_source: "{{confluent_cli_repository_baseurl}}/confluent-cli/archives/{{confluent_cli_version}}/{{confluent_cli_binary}}_{{(confluent_cli_version == 'latest') | ternary('', 'v')}}{{confluent_cli_version}}_{{ansible_system|lower}}_{{confluent_cli_goarch[ansible_architecture]}}.tar.gz"
+confluent_cli_archive_file_source: "{{confluent_cli_repository_baseurl}}/confluent-cli/archives/{{confluent_cli_version}}/{{confluent_cli_binary}}_{{(confluent_cli_version is version('3.0.0', '>=')) | ternary('', 'v')}}{{confluent_cli_version}}_{{ansible_system|lower}}_{{confluent_cli_goarch[ansible_architecture]}}.tar.gz"
 
 ### Set to true to indicate the CLI archive file is remote (i.e. already on the target node) or a URL. Set to false if the archive file is on the control node.
 confluent_cli_archive_file_remote: true

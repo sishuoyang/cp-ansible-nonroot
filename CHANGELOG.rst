@@ -4,23 +4,129 @@ Ansible Playbooks for Confluent Platform - Release Notes
 
 .. contents:: Topics
 
-v7.2.2
+v7.4.2
 ======
 
 Notable enhancements
 -------------
 
- - Improved validation of certificates, accepts ssl key file in ansible-vault format
- - Optimise the process of copying mds pem file to host nodes, and other security improvements.
- - Minor code cleanup and refactoring.
- - Making Java SID Repo as optional.
- - Isolate truststore, keystore ceration when multiple kafka connect services run on same host.
- - Allow creation of keystore and truststore with custom password when using custom or self-signed certs
- - Imporved Validations, Internet access check now considers whether proxy is set or not.
- - Fix typo kakfa to kafka
- - New Sample inventory with single node.
- - Cleanup Kafka Broker Custom properties
- - Enhanced RBAC support with FIPS
+- Updated default confluent cli version to 3.30.1
+- Fixed bugs in discovery to generate inventory file with appropriate security protocols
+- Ansible builtin File mode is now string instead of octal
+
+
+v7.4.1
+======
+
+Notable enhancements
+-------------
+
+- Parametrize the number of retries for MDS API requests
+- Add Broker's principals to Controller's super user list on a Kraft cluster with RBAC
+- Removed timeout configs from client properties of Kafka Broker, allowing customers to use custom timeout values
+- Archived installation of Confluent Platform on Debian 9 since the OS version reached end-of-life
+
+
+v7.4.0
+======
+
+New features
+-------------
+
+- CP-ansible supports KRaft-based fresh Confluent Platform deployments
+- CP-ansible includes the Confluent Ansible Discovery tool for migrating stand-alone Confluent Platform deployments to Ansible-managed Confluent Platform environments
+
+Notable enhancements
+-------------
+
+- Default confluent cli version has been updated to 3.2.1, which removes the dependency of secrets protection on rbac
+- Added variable to customize the number of days from Certificate Authority creation to expiration
+- Dedicated playbook to validate hosts
+- Added support for custom Kerberos client configuration file and custom path
+- Switched to archive repo for debian9 since it reached end-of-life
+- Added support for RHEL9 OS on CP
+
+Upgrade considerations
+-------------
+
+- Upgrades to CP 7.4 can be taken up with CP-Ansible using Ansible versions 4 - 7 (ansible-core versions 2.11 - 2.14)
+
+v7.3.4
+======
+
+Notable fixes
+-------------
+
+- Introduced timeout while deploying connector
+- Added optional vars to configure kerberos.kdc_port (default: 88), kerberos.admin_port (default: 749)
+- Minor fixes to support confluent CLI v3
+- Fixed minor bugs in SSL principal mapping rule logic
+- Fixed some non-root CP deployment issues
+- Fixed mTLS healthchecks
+
+v7.3.3
+======
+
+Notable enhancements
+-------------
+
+- Move out host validations as an on-demand playbook
+- Improve error handling deploying kafka connectors
+- Add confluent.ssl.* properties
+- Fix export certificates logic from Keystore and Truststore
+- Fix JMX Exporter Rules
+- Support custom kerberos client config file and custom path
+- Add retries to register cluster task
+
+
+v7.3.2
+======
+
+Notable enhancements
+-------------
+
+- Added provision to configure Kafka Connect Replicator custom rest extension classes
+- For archive installations, fixed logic to use `config_prefix` variable for zookeeper, kafka broker, schema registry, kafka connect
+- Skip "Install pip" and "Upgrade pip" tasks using `package` tag
+- Introduced new tag `cp_package` for installing/ upgrading confluent packages
+
+
+v7.3.1
+======
+
+Notable enhancements
+-------------
+
+- Bug fixes to enable running playbook in ansible check mode.
+- Validation about python version - 3.6+
+- Bug fixes for rhel7 related to epel-release package
+
+
+v7.3.0
+======
+
+New features
+-------------
+
+- CP-Ansible playbooks are Red Hat certified now and are available on Automation Hub starting 7.0.X
+- Confluent Platform and CP-Ansible now supports JDK 17, in addition to JDK 8 and JDK 11. CP-Ansible support is now available for custom Java installations too.
+- Day 2 Operations - upgrade from non-RBAC to RBAC using CP-Ansible is guarded with zero downtime and officially supported.
+- Ansible Playbooks for Confluent Platform is now officially supported for Ansible 2.12 and 2.13 in addition to 2.11.
+
+Notable enhancements
+-------------
+
+- Default confluent cli version has been updated to 2.28.1 from 2.19
+- New var ansible_become_localhost introduced to specify the become value for localhost - used when dealing with any file present on localhost/controller
+- Dedicated playbook to restart services manually
+- rbac_component_additional_system_admins now supports assignment of principals and not just users
+- Pip and python modules can/will now be installed on managed nodes via CP-Ansible
+
+Upgrade considerations
+-------------
+
+- Upgrades to CP 7.3 can be taken up with CP-Ansible using Ansible 2.12 and 2.13 too.
+- Variable rbac_component_additional_system_admins now can be updated in inventory file for assignment of principals. Backward compatible.
 
 
 v7.2.1

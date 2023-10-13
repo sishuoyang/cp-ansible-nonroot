@@ -1,14 +1,14 @@
 ---
-### Installation of Confluent Platform on CentOS7.
+### Installation of Confluent Platform on Ubuntu1804.
 ### MTLS enabled.
 
 driver:
   name: docker
 platforms:
-  - name: zookeeper1
-    hostname: zookeeper1.confluent
+  - name: ${KRAFT_CONTROLLER:-zookeeper}1
+    hostname: ${KRAFT_CONTROLLER:-zookeeper}1.confluent
     groups:
-      - zookeeper
+      - ${CONTROLLER_HOSTGROUP:-zookeeper}
     image: geerlingguy/docker-ubuntu1804-ansible
     dockerfile: ../Dockerfile-ubuntu.j2
     command: ""
@@ -121,3 +121,4 @@ provisioner:
       all:
         ssl_enabled: true
         ssl_mutual_auth_enabled: true
+        secrets_protection_enabled: true # To test secrets protection on cli v3 without rbac

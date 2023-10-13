@@ -17,7 +17,7 @@
   delegate_to: localhost
   vars:
     ansible_connection: local
-    ansible_become: false
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Register if CA Cert Exists on Ansible Controller
   tags: certificate_authority
@@ -27,7 +27,7 @@
   delegate_to: localhost
   vars:
     ansible_connection: local
-    ansible_become: false
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Apt update
   apt:
@@ -47,7 +47,7 @@
   delegate_to: localhost
   vars:
     ansible_connection: local
-    ansible_become: false
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Register if MDS Private Key Exists on Ansible Controller
   tags: certificate_authority
@@ -57,7 +57,7 @@
   delegate_to: localhost
   vars:
     ansible_connection: local
-    ansible_become: false
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Generate SSL Files
   block:
@@ -87,11 +87,12 @@
       when: ansible_os_family == "Debian"
 
     - name: Create SSL Certificate Generation Directory
-      tags: certificate_authority
+      tags:
+        - certificate_authority
       file:
         path: "{{ ssl_file_dir_final }}/generation"
         state: directory
-        mode: 0755
+        mode: '755'
 
     - name: Create Certificate Authority
       tags: certificate_authority
@@ -99,7 +100,7 @@
         openssl req -new -x509 \
           -keyout {{ ssl_file_dir_final }}/generation/{{ssl_self_signed_ca_key_filepath|basename}} \
           -out {{ ssl_file_dir_final }}/generation/{{ssl_self_signed_ca_cert_filepath|basename}} \
-          -days 365 \
+          -days {{ certificate_authority_expiration_days }} \
           -subj '/CN=ca1.test.confluent.io/OU=TEST/O=CONFLUENT/L=MountainView/S=Ca/C=US' \
           -passin pass:{{ssl_self_signed_ca_password}} -passout pass:{{ssl_self_signed_ca_password}}
       when: >

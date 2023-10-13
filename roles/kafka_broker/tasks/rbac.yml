@@ -21,13 +21,19 @@
 # Take super.users property, split into list, remove empty string from list, and add in mds_super_user
 - name: Initialize Super Users List
   set_fact:
-    super_users: "{{ (kafka_broker_final_properties['super.users'] | default('')).split(';') | difference(['']) }} + [ 'User:{{ mds_super_user }}' ]"
+    super_users: "{{ (kafka_broker_final_properties['super.users'] | default('')).split(';') | difference(['']) + [ 'User:' + lookup('vars', 'mds_super_user') ]}}"
 
 # Loop over each brokers principal and add to list
 - name: Add Each Broker's Principal to Super Users List
   set_fact:
-    super_users: "{{super_users}}  + [ '{{ hostvars[item]['kafka_broker_principal'] }}' ]"
+    super_users: "{{ super_users + [ hostvars[item]['kafka_broker_principal'] ] }}"
   loop: "{{ groups['kafka_broker'] }}"
+
+- name: Add Each Controller's Principal to Broker's Super Users List
+  set_fact:
+    super_users: "{{ super_users + [ hostvars[item]['kafka_controller_principal'] ] }}"
+  loop: "{{ groups['kafka_controller'] }}"
+  when: kraft_enabled|bool and kafka_controller_ssl_mutual_auth_enabled|bool
 
 - name: Remove Duplicates and Convert to String
   set_fact:
@@ -41,11 +47,23 @@
       }
     ) }}"
 
+#this is required when we have mTLS enabled
+- name: Add Broker's Principal to Controller's Super Users List
+  include_tasks: set_controller_principal.yml
+  vars:
+    controller_host: "{{ item }}"
+  loop: "{{ groups['kafka_controller'] }}"
+  args:
+    apply:
+      delegate_to: "{{item}}"
+  when: kraft_enabled|bool and kafka_controller_ssl_mutual_auth_enabled|bool
+  run_once: true
+
 - name: Create SSL Certificate Directory
   file:
     path: /var/ssl/private
     state: directory
-    mode: 0755
+    mode: '755'
   tags:
     - privileged
     - filesystem
@@ -55,6 +73,9 @@
     path: "{{ token_services_public_pem_file }}"
   register: broker_public_pem_file
   delegate_to: localhost
+  vars:
+    ansible_connection: local
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Debug
   ansible.builtin.debug:
@@ -65,7 +86,7 @@
   copy:
     src: "{{token_services_public_pem_file}}"
     dest: "{{rbac_enabled_public_pem_path}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_broker_user}}"
     group: "{{kafka_broker_group}}"
   when:
@@ -78,6 +99,9 @@
     path: "{{ token_services_private_pem_file }}"
   register: broker_private_pem_file
   delegate_to: localhost
+  vars:
+    ansible_connection: local
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Debug
   ansible.builtin.debug:
@@ -88,7 +112,7 @@
   copy:
     src: "{{token_services_private_pem_file}}"
     dest: "{{rbac_enabled_private_pem_path}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_broker_user}}"
     group: "{{kafka_broker_group}}"
   when:

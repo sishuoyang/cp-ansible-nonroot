@@ -21,27 +21,41 @@
   vars:
     service_name: "{{ kafka_connect_service_name }}"
   when: installation_method == "package"
-  tags: package
+  tags:
+    - package
+    - cp_package
 
 - name: Install the Kafka Connect Packages
   yum:
     name: "{{ kafka_connect_packages | product([confluent_package_redhat_suffix]) | map('join') | list }}"
     state: latest
+  register: install_kafka_connect_package_result
+  until: install_kafka_connect_package_result is success  or ansible_check_mode
+  retries: 5
+  delay: 90
   when:
     - ansible_os_family == "RedHat"
     - installation_method == "package"
   ignore_errors: "{{ ansible_check_mode }}"
-  tags: package
+  tags:
+    - package
+    - cp_package
   notify: restart connect distributed
 
 - name: Install the Kafka Connect Packages
   apt:
     name: "{{ kafka_connect_packages | product([confluent_package_debian_suffix]) | map('join') | list }}"
+  register: install_kafka_connect_package_result
+  until: install_kafka_connect_package_result is success  or ansible_check_mode
+  retries: 5
+  delay: 90
   when:
     - ansible_os_family == "Debian"
     - installation_method == "package"
   ignore_errors: "{{ ansible_check_mode }}"
-  tags: package
+  tags:
+    - package
+    - cp_package
   notify: restart connect distributed
 
 - name: Create Kafka Connect Group
@@ -75,11 +89,12 @@
     src: "{{binary_base_path}}/lib/systemd/system/{{kafka_connect_default_service_name}}.service"
     remote_src: true
     dest: "{{kafka_connect.systemd_file}}"
-    mode: 0644
+    mode: '644'
     force: true
   when: installation_method == "archive"
   tags:
     - systemd
+    - privileged
 
 # Non-Archive File deployments need to create SystemD service units when the user changes the service name
 - name: Copy Kafka Connect Service from default install to system
@@ -87,9 +102,11 @@
     src: "{{systemd_base_dir}}/{{kafka_connect_default_service_name}}.service"
     remote_src: true
     dest: "{{kafka_connect.systemd_file}}"
-    mode: 0644
+    mode: '644'
     force: true
   when: installation_method != "archive" and kafka_connect_default_service_name != kafka_connect_service_name
+  tags:
+    - privileged
 
 - include_role:
     name: ssl
@@ -102,7 +119,7 @@
     service_name: "{{ kafka_connect_service_name if kafka_connect_service_name != kafka_connect_default_service_name else 'kafka_connect' }}"
     user: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
-    hostnames: "{{ [inventory_hostname, ansible_fqdn, ansible_host, ansible_ssh_host, hostname|default(omit)] | unique }}"
+    hostnames: "{{ [inventory_hostname, ansible_fqdn, ansible_host, ansible_ssh_host|default(omit), hostname|default(omit)] | unique }}"
     ca_cert_path: "{{kafka_connect_ca_cert_path}}"
     cert_path: "{{kafka_connect_cert_path}}"
     key_path: "{{kafka_connect_key_path}}"
@@ -146,7 +163,7 @@
   file:
     path: "{{ kafka_connect.config_file | dirname }}"
     state: directory
-    mode: 0750
+    mode: '750'
     owner: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
   tags:
@@ -156,7 +173,7 @@
   template:
     src: connect-distributed.properties.j2
     dest: "{{kafka_connect.config_file}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
   notify: restart connect distributed
@@ -182,7 +199,7 @@
     - configuration
   when:
     - kafka_connect_secrets_protection_enabled|bool
-    - rbac_enabled|bool
+    - rbac_enabled|bool or confluent_cli_version is version('3.0.0', '>=')
 
 - name: Install Connect Plugins
   include_tasks: connect_plugins.yml
@@ -193,7 +210,7 @@
     state: directory
     group: "{{kafka_connect_group}}"
     owner: "{{kafka_connect_user}}"
-    mode: 0770
+    mode: '770'
   tags:
     - filesystem
     - log
@@ -218,7 +235,7 @@
     path: "{{kafka_connect.log4j_file}}"
     group: "{{kafka_connect_group}}"
     owner: "{{kafka_connect_user}}"
-    mode: 0640
+    mode: '640'
   tags:
     - filesystem
     - log
@@ -227,7 +244,7 @@
   file:
     path: "{{ logredactor_rule_path | dirname }}"
     state: directory
-    mode: 0755
+    mode: '755'
   when: (kafka_connect_custom_log4j|bool) and (logredactor_enabled|bool) and (logredactor_rule_url == '')
   tags:
     - log
@@ -236,7 +253,7 @@
   copy:
     src: "{{ logredactor_rule_path_local }}"
     dest: "{{ logredactor_rule_path }}"
-    mode: 0644
+    mode: '644'
   when: (kafka_connect_custom_log4j|bool) and (logredactor_enabled|bool) and (logredactor_rule_url == '')
   tags:
     - log
@@ -266,7 +283,7 @@
   template:
     src: kafka_connect_jolokia.properties.j2
     dest: "{{kafka_connect_jolokia_config}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
   when: kafka_connect_jolokia_enabled|bool
@@ -279,7 +296,7 @@
   copy:
     src: "{{kafka_connect_jmxexporter_config_source_path}}"
     dest: "{{kafka_connect_jmxexporter_config_path}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
   when: kafka_connect_jmxexporter_enabled|bool
@@ -290,7 +307,7 @@
   template:
     src: jaas.conf.j2
     dest: "{{kafka_connect.jaas_file}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
   notify: restart connect distributed
@@ -300,7 +317,7 @@
   template:
     src: password.properties.j2
     dest: "{{kafka_connect.password_file}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
   notify: restart connect distributed
@@ -312,21 +329,23 @@
     owner: "{{kafka_connect_user}}"
     group: "{{kafka_connect_group}}"
     state: directory
-    mode: 0640
+    mode: '640'
   tags:
     - systemd
+    - privileged
 
 - name: Write Service Overrides
   template:
     src: override.conf.j2
     dest: "{{ kafka_connect.systemd_override }}"
-    mode: 0640
+    mode: '640'
     owner: root
     group: root
   notify: restart connect distributed
   diff: "{{ not mask_sensitive_diff|bool }}"
   tags:
     - systemd
+    - privileged
 
 - name: (Non-root deployment) Create Start Script
   include_tasks: create_start_script.yml

@@ -8,7 +8,23 @@ Below are the supported variables for the role variables
 
 Version of Confluent Platform to install
 
-Default:  7.2.2
+Default:  7.4.2
+
+***
+
+### fetch_logs_path
+
+Path on component to store logs collected during fetch_logs playbook
+
+Default:  /tmp
+
+***
+
+### ansible_become_localhost
+
+Boolean to specify the become value for localhost, used when dealing with any file present on localhost/controller.
+
+Default:  false
 
 ***
 
@@ -118,7 +134,7 @@ Default:  false
 
 ### fips_enabled
 
-Boolean to have cp-ansible configure components with FIPS security settings. Must have ssl_enabled: true and use Java 8. Only valid for self signed certs and ssl_custom_certs: true, not ssl_provided_keystore_and_truststore: true.
+Boolean to have cp-ansible configure components with FIPS security settings. Must have ssl_enabled: true and use Java 8 or 11. Only valid for self signed certs and ssl_custom_certs: true, not ssl_provided_keystore_and_truststore: true.
 
 Default:  false
 
@@ -174,9 +190,17 @@ Default:  0
 
 ### kerberos_configure
 
-Boolean to configure Kerberos krb5.conf file, must also set kerberos.realm, keberos.kdc_hostname, kerberos.admin_hostname, where kerberos is a dictionary
+Boolean to configure Kerberos krb5.conf file, must also set kerberos.realm, kerberos.kdc_hostname, kerberos.admin_hostname, where kerberos is a dictionary. Optional variables: kerberos.kdc_port (default: 88), kerberos.admin_port (default: 749)
 
 Default:  true
+
+***
+
+### kerberos_client_config_file_dest
+
+Custom path for the location of kerberos client configuration file, works with any value of kerberos_configure
+
+Default:  /etc/krb5.conf
 
 ***
 
@@ -193,6 +217,14 @@ Default:  1000
 Variable to define the minimum amount of memory in MB required to run zookeeper.  Calculated as default heap size plus 1GB for OS.
 
 Default:  2000
+
+***
+
+### required_total_memory_mb_kafka_controller
+
+Variable to define the minimum amount of memory in MB required to run kafka controller. Calculated as default heap size plus 1GB for OS.
+
+Default:  7000
 
 ***
 
@@ -271,6 +303,14 @@ Default:  true
 ### zookeeper_health_checks_enabled
 
 Boolean to enable health checks on Zookeeper
+
+Default:  "{{health_checks_enabled}}"
+
+***
+
+### kafka_controller_health_checks_enabled
+
+Boolean to enable health checks on Kafka
 
 Default:  "{{health_checks_enabled}}"
 
@@ -390,9 +430,9 @@ Default:  "/etc"
 
 ### confluent_cli_download_enabled
 
-Boolean to have cp-ansible download the Confluent CLI
+Boolean to have cp-ansible download the Confluent CLI, required to be enabled in case of secrets protection
 
-Default:  "{{rbac_enabled}}"
+Default:  "{{ secrets_protection_enabled }}"
 
 ***
 
@@ -416,7 +456,7 @@ Default:  "/usr/local/bin/confluent"
 
 Confluent CLI version to download (e.g. "1.9.0"). Support matrix https://docs.confluent.io/platform/current/installation/versions-interoperability.html#confluent-cli
 
-Default:  2.19.0
+Default:  3.30.1
 
 ***
 
@@ -441,6 +481,14 @@ Default:  none
 Boolean to configure components with TLS Encryption. Also manages Java Keystore creation
 
 Default:  false
+
+***
+
+### certificate_authority_expiration_days
+
+Set this variable to customize expiration days for certificate authority. Applies for all components of Confluent Platform.
+
+Default:  365
 
 ***
 
@@ -712,7 +760,7 @@ Default:  "{{sasl_protocol if sasl_protocol == 'kerberos' else 'none'}}"
 
 Authentication to put on ZK Server to Server connections. Available options: [mtls, digest, digest_over_tls].
 
-Default:  "{{ 'mtls' if zookeeper_ssl_enabled and zookeeper_ssl_mutual_auth_enabled else zookeeper_sasl_protocol }}"
+Default:  "{% if zookeeper_ssl_enabled and zookeeper_ssl_mutual_auth_enabled %}mtls{% elif zookeeper_sasl_protocol == 'digest' %}digest{% else %}none{% endif %}"
 
 ***
 
@@ -776,7 +824,7 @@ Default:  "{{ zookeeper_ssl_enabled }}"
 
 Path on Zookeeper host for Jolokia Configuration file
 
-Default:  "{{ (config_base_path, 'etc/kafka/zookeeper_jolokia.properties' ) | path_join }}"
+Default:  "{{ (config_base_path, zookeeper_config_prefix_path, 'zookeeper_jolokia.properties') | path_join }}"
 
 ***
 
@@ -854,7 +902,7 @@ Default:  3888
 
 ### zookeeper_copy_files
 
-Use to copy files from control node to zookeeper hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '0750') and file_mode (default: '0640') to set directory and file permissions.
+Use to copy files from control node to zookeeper hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
 
 Default:  []
 
@@ -869,6 +917,222 @@ Default:  {}
 ***
 
 ### zookeeper_skip_restarts
+
+Boolean used for disabling of systemd service restarts when rootless install is executed
+
+Default:  "{{ skip_restarts }}"
+
+***
+
+### kafka_controller_quorum_voters
+
+Default controller quorum voters
+
+Default:  "{% for controller_hostname in groups.kafka_controller|default([]) %}{% if loop.index > 1%},{% endif %}{{groups.kafka_controller.index(controller_hostname)|int + 9991}}@{{controller_hostname}}:{{ kafka_controller_listeners['controller']['port'] }}{%endfor%}"
+
+***
+
+### kafka_controller_config_prefix
+
+Default Kafka config prefix. Only valid to customize when installation_method: archive
+
+Default:  "{{ config_prefix }}/controller"
+
+***
+
+### kafka_controller_ssl_enabled
+
+Boolean to configure controller with TLS Encryption. Also manages Java Keystore creation
+
+Default:  "{{ssl_enabled}}"
+
+***
+
+### kafka_controller_ssl_mutual_auth_enabled
+
+Boolean to enable mTLS Authentication on controller (Server to Server and Client to Server). Configures kafka to authenticate with mTLS.
+
+Default:  "{{ssl_mutual_auth_enabled}}"
+
+***
+
+### kafka_controller_sasl_protocol
+
+SASL Mechanism for controller Server to Server and Server to Client Authentication. Options are plain, kerberos, none
+
+Default:  "{{sasl_protocol}}"
+
+***
+
+### kafka_controller_user
+
+Set this variable to customize the Linux User that the Kafka controller Service runs with. Default user is cp-kafka.
+
+Default:  "{{kafka_controller_default_user}}"
+
+***
+
+### kafka_controller_group
+
+Set this variable to customize the Linux Group that the Kafka controller Service user belongs to. Default group is confluent.
+
+Default:  "{{kafka_controller_default_group}}"
+
+***
+
+### kafka_controller_log_dir
+
+Set this variable to customize the directory that the Kafka controller writes log files to. Default location is /var/log/kafka.
+
+Default:  "{{kafka_controller_default_log_dir}}"
+
+***
+
+### kafka_controller_jolokia_enabled
+
+Boolean to enable Jolokia Agent installation and configuration on kafka
+
+Default:  "{{jolokia_enabled}}"
+
+***
+
+### kafka_controller_jolokia_port
+
+Port to expose kafka jolokia metrics. Beware of port collisions if colocating components on same host
+
+Default:  7770
+
+***
+
+### kafka_controller_jolokia_ssl_enabled
+
+Boolean to enable TLS encryption on Kafka jolokia metrics
+
+Default:  "{{ ssl_enabled }}"
+
+***
+
+### kafka_controller_jolokia_config
+
+Path on Kafka host for Jolokia Configuration file
+
+Default:  "{{ (config_base_path, kafka_controller_config_prefix_path, 'kafka_jolokia.properties') | path_join }}"
+
+***
+
+### kafka_controller_jolokia_auth_mode
+
+Authentication Mode for Kafka's Jolokia Agent. Possible values: none, basic. If selecting basic, you must set kafka_controller_jolokia_user and kafka_controller_jolokia_password
+
+Default:  "{{jolokia_auth_mode}}"
+
+***
+
+### kafka_controller_jolokia_user
+
+Username for Kafka's Jolokia Agent when using Basic Auth
+
+Default:  "{{jolokia_user}}"
+
+***
+
+### kafka_controller_jolokia_password
+
+Password for Kafka's Jolokia Agent when using Basic Auth
+
+Default:  "{{jolokia_password}}"
+
+***
+
+### kafka_controller_jmxexporter_enabled
+
+Boolean to enable Prometheus Exporter Agent installation and configuration on kafka
+
+Default:  "{{jmxexporter_enabled}}"
+
+***
+
+### kafka_controller_jmxexporter_port
+
+Port to expose prometheus metrics. Beware of port collisions if colocating components on same host
+
+Default:  8079
+
+***
+
+### kafka_controller_jmxexporter_config_source_path
+
+Path on Ansible Controller for Kafka Broker jmx config file. Only necessary to set for custom config.
+
+Default:  kafka.yml.j2
+
+***
+
+### kafka_controller_jmxexporter_config_path
+
+Destination path for Kafka controller jmx config file
+
+Default:  /opt/prometheus/kafka.yml
+
+***
+
+### kafka_controller_copy_files
+
+Use to copy files from control node to kafka hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
+
+Default:  []
+
+***
+
+### kafka_controller_default_internal_replication_factor
+
+Replication Factor for internal topics. Defaults to the minimum of the number of controllers and can be overridden via default replication factor (see default_internal_replication_factor).
+
+Default:  "{{ [ groups['kafka_controller'] | default(['localhost']) | length, default_internal_replication_factor ] | min }}"
+
+***
+
+### kafka_controller_metrics_reporter_enabled
+
+Boolean to enable the kafka's metrics reporter. Defaults to true if Control Center in inventory. Enable if you wish to have metrics reported to a centralized monitoring cluster.
+
+Default:  "{{ confluent_server_enabled and 'control_center' in groups }}"
+
+***
+
+### kafka_controller_custom_properties
+
+Use to set custom kafka properties. This variable is a dictionary. Put values true/false in quotation marks to perserve case.
+
+Default:  {}
+
+***
+
+### kafka_controller_custom_client_properties
+
+Use to add custom properties to variable kafka_controller_client_properties. This variable is a dictionary. Put values true/false in quotation marks to perserve case.
+
+Default:  {}
+
+***
+
+### kafka_controller_rest_proxy_enabled
+
+Boolean to enable the embedded rest proxy within Kraft Controller. Not yet supported.
+
+Default:  false
+
+***
+
+### kafka_controller_cluster_name
+
+Use to register and identify your Kafka cluster in the MDS.
+
+Default:  ""
+
+***
+
+### kafka_controller_skip_restarts
 
 Boolean used for disabling of systemd service restarts when rootless install is executed
 
@@ -976,7 +1240,7 @@ Default:  "{{ ssl_enabled }}"
 
 Path on Kafka host for Jolokia Configuration file
 
-Default:  "{{ (config_base_path,'etc/kafka/kafka_jolokia.properties') | path_join }}"
+Default:  "{{ (config_base_path, kafka_broker_config_prefix_path, 'kafka_jolokia.properties') | path_join }}"
 
 ***
 
@@ -1038,7 +1302,7 @@ Default:  /opt/prometheus/kafka.yml
 
 ### kafka_broker_copy_files
 
-Use to copy files from control node to kafka hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '0750') and file_mode (default: '0640') to set directory and file permissions.
+Use to copy files from control node to kafka hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
 
 Default:  []
 
@@ -1080,7 +1344,7 @@ Default:  {}
 
 Boolean to enable the embedded rest proxy within Kafka. NOTE- Embedded Rest Proxy must be enabled if RBAC is enabled and Confluent Server must be enabled
 
-Default:  "{{confluent_server_enabled and not ccloud_kafka_enabled}}"
+Default:  "{{confluent_server_enabled and not ccloud_kafka_enabled }}"
 
 ***
 
@@ -1208,7 +1472,7 @@ Default:  "{{ schema_registry_ssl_enabled }}"
 
 Path on Schema Registry host for Jolokia Configuration file
 
-Default:  "{{ (config_base_path,'etc/schema-registry/schema_registry_jolokia.properties') | path_join }}"
+Default:  "{{ (config_base_path, schema_registry_config_prefix_path, 'schema_registry_jolokia.properties') | path_join }}"
 
 ***
 
@@ -1270,7 +1534,7 @@ Default:  8078
 
 ### schema_registry_copy_files
 
-Use to copy files from control node to schema registry hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '0750') and file_mode (default: '0640') to set directory and file permissions.
+Use to copy files from control node to schema registry hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
 
 Default:  []
 
@@ -1392,7 +1656,7 @@ Default:  "{{ kafka_rest_ssl_enabled }}"
 
 Path on Rest Proxy host for Jolokia Configuration file
 
-Default:  "{{ (config_base_path,'etc/kafka-rest/kafka_rest_jolokia.properties') | path_join }}"
+Default:  "{{ (config_base_path, kafka_rest_config_prefix_path, 'kafka_rest_jolokia.properties') | path_join }}"
 
 ***
 
@@ -1454,7 +1718,7 @@ Default:  8075
 
 ### kafka_rest_copy_files
 
-Use to copy files from control node to schema registry hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '0750') and file_mode (default: '0640') to set directory and file permissions.
+Use to copy files from control node to schema registry hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
 
 Default:  []
 
@@ -1616,7 +1880,7 @@ Default:  "{{ kafka_connect_ssl_enabled }}"
 
 Path on Connect host for Jolokia Configuration file
 
-Default:  "{{ (config_base_path,'etc/kafka/kafka_connect_jolokia.properties') | path_join }}"
+Default:  "{{ (config_base_path, kafka_connect_config_prefix_path, 'kafka_connect_jolokia.properties') | path_join }}"
 
 ***
 
@@ -1678,7 +1942,7 @@ Default:  8077
 
 ### kafka_connect_copy_files
 
-Use to copy files from control node to connect hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '0750') and file_mode (default: '0640') to set directory and file permissions.
+Use to copy files from control node to connect hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
 
 Default:  []
 
@@ -1902,7 +2166,7 @@ Default:  8076
 
 ### ksql_copy_files
 
-Use to copy files from control node to ksqlDB hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '0750') and file_mode (default: '0640') to set directory and file permissions.
+Use to copy files from control node to ksqlDB hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
 
 Default:  []
 
@@ -2030,7 +2294,7 @@ Default:  "{{control_center_default_log_dir}}"
 
 ### control_center_copy_files
 
-Use to copy files from control node to Control Center hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '0750') and file_mode (default: '0640') to set directory and file permissions.
+Use to copy files from control node to Control Center hosts. Set to list of dictionaries with keys: source_path (full path of file on control node) and destination_path (full path to copy file to). Optionally specify directory_mode (default: '750') and file_mode (default: '640') to set directory and file permissions.
 
 Default:  []
 
@@ -2132,6 +2396,14 @@ Default:  password
 
 ***
 
+### mds_retries
+
+Parameter to increase the number of retries for MDS API requests
+
+Default:  30
+
+***
+
 ### kafka_broker_ldap_user
 
 LDAP User for Kafkas Embedded Rest Service to authenticate as
@@ -2143,6 +2415,22 @@ Default:  "{{mds_super_user}}"
 ### kafka_broker_ldap_password
 
 Password to kafka_broker_ldap_user LDAP User
+
+Default:  "{{mds_super_user_password}}"
+
+***
+
+### kafka_controller_ldap_user
+
+LDAP User for Kafkas Embedded Rest Service to authenticate as
+
+Default:  "{{mds_super_user}}"
+
+***
+
+### kafka_controller_ldap_password
+
+Password to kafka_controller_ldap_user LDAP User
 
 Default:  "{{mds_super_user_password}}"
 
@@ -2342,15 +2630,23 @@ Default:  false
 
 ### rbac_component_additional_system_admins
 
-List of users to be granted system admin Role Bindings across all components
+List of principals to be granted system admin Role Bindings across all components
 
 Default:  []
 
 ***
 
+### kafka_controller_additional_system_admins
+
+List of principals to be granted system admin Role Bindings on the Kafka controller Cluster
+
+Default:  "{{rbac_component_additional_system_admins}}"
+
+***
+
 ### kafka_broker_additional_system_admins
 
-List of users to be granted system admin Role Bindings on the Kafka Cluster
+List of principals to be granted system admin Role Bindings on the Kafka Cluster
 
 Default:  "{{rbac_component_additional_system_admins}}"
 
@@ -2358,7 +2654,7 @@ Default:  "{{rbac_component_additional_system_admins}}"
 
 ### schema_registry_additional_system_admins
 
-List of users to be granted system admin Role Bindings on the Schema Registry Cluster
+List of principals to be granted system admin Role Bindings on the Schema Registry Cluster
 
 Default:  "{{rbac_component_additional_system_admins}}"
 
@@ -2366,7 +2662,7 @@ Default:  "{{rbac_component_additional_system_admins}}"
 
 ### ksql_additional_system_admins
 
-List of users to be granted system admin Role Bindings on the ksqlDB Cluster
+List of principals to be granted system admin Role Bindings on the ksqlDB Cluster
 
 Default:  "{{rbac_component_additional_system_admins}}"
 
@@ -2374,7 +2670,7 @@ Default:  "{{rbac_component_additional_system_admins}}"
 
 ### kafka_connect_additional_system_admins
 
-List of users to be granted system admin Role Bindings on the Connect Cluster
+List of principals to be granted system admin Role Bindings on the Connect Cluster
 
 Default:  "{{rbac_component_additional_system_admins}}"
 
@@ -2382,7 +2678,7 @@ Default:  "{{rbac_component_additional_system_admins}}"
 
 ### control_center_additional_system_admins
 
-List of users to be granted system admin Role Bindings on the Control Center Cluster
+List of principals to be granted system admin Role Bindings on the Control Center Cluster
 
 Default:  "{{rbac_component_additional_system_admins}}"
 
@@ -2390,7 +2686,7 @@ Default:  "{{rbac_component_additional_system_admins}}"
 
 ### secrets_protection_enabled
 
-Boolean to enable secrets protection on all components except Zookeeper. Starting from CP 7.1.0, secrets protection will work only with RBAC
+Boolean to enable secrets protection on all components except Zookeeper.
 
 Default:  false
 
@@ -2425,6 +2721,54 @@ Default:  generated_ssl_files/security.properties
 Boolean to encrypt sensitive properties, such as those containing 'password', 'basic.auth.user.info', or 'sasl.jaas.config'.
 
 Default:  "{{secrets_protection_enabled}}"
+
+***
+
+### kafka_controller_secrets_protection_enabled
+
+Boolean to enable secrets protection in Kafka controller
+
+Default:  "{{secrets_protection_enabled}}"
+
+***
+
+### kafka_controller_client_secrets_protection_enabled
+
+Boolean to enable secrets protection on kafka controller client configuration.
+
+Default:  "{{secrets_protection_enabled}}"
+
+***
+
+### kafka_controller_client_secrets_protection_encrypt_passwords
+
+Boolean to encrypt sensitive properties, such as those containing 'password', 'basic.auth.user.info', or 'sasl.jaas.config' for Kafka.
+
+Default:  "{{secrets_protection_encrypt_passwords}}"
+
+***
+
+### kafka_controller_client_secrets_protection_encrypt_properties
+
+List of Kafka client properties to encrypt. Can be used in addition to kafka_controller_client_secrets_protection_encrypt_passwords.
+
+Default:  []
+
+***
+
+### kafka_controller_secrets_protection_encrypt_passwords
+
+Boolean to encrypt sensitive properties, such as those containing 'password', 'basic.auth.user.info', or 'sasl.jaas.config' for Kafka.
+
+Default:  "{{secrets_protection_encrypt_passwords}}"
+
+***
+
+### kafka_controller_secrets_protection_encrypt_properties
+
+List of Kafka properties to encrypt. Can be used in addition to kafka_controller_secrets_protection_encrypt_passwords.
+
+Default:  []
 
 ***
 
@@ -2641,6 +2985,22 @@ Default:  ""
 Password for Proxy Server used by Telemetry. Only set if Proxy Server requires authentication
 
 Default:  ""
+
+***
+
+### kafka_controller_telemetry_enabled
+
+Boolean to configure Telemetry on Kafka. Must also set telemetry_api_key and telemetry_api_secret
+
+Default:  "{{telemetry_enabled}}"
+
+***
+
+### kafka_controller_telemetry_ansible_labels_enabled
+
+Boolean to send cp-ansible Telemetry Metrics from Kafka. Currently only sends cp-ansible version data
+
+Default:  "{{kafka_controller_telemetry_enabled}}"
 
 ***
 
@@ -3001,14 +3361,6 @@ Default:  connect-status
 Set this variable to customize the topic where Kafka Connect Replicator stores it's configuration.
 
 Default:  connect-configs
-
-***
-
-### kafka_connect_replicator_consumer_timestamps_topic
-
-Set this variable to customize the topic where Kafka Connect Replicator consumer stores it's timestamps.
-
-Default:   __consumer_timestamps
 
 ***
 
@@ -3940,6 +4292,14 @@ Default:  "{{ kafka_connect_replicator_keystore_storepass }}"
 
 ***
 
+### kafka_connect_replicator_custom_rest_extension_classes
+
+Additional set of Kafka Connect Replicator extension classes.
+
+Default:  []
+
+***
+
 ### deployment_strategy
 
 Deployment strategy for all components. Set to rolling to run all provisionging tasks on one host at a time, this is less destructive but can fail when security modes get updated.
@@ -4012,6 +4372,14 @@ Default:  "{{deployment_strategy}}"
 
 ***
 
+### kafka_controller_deployment_strategy
+
+Deployment strategy for Kafka controller. Set to parallel to run all provisionging tasks in parallel on all hosts, which may cause downtime.
+
+Default:  "{{deployment_strategy}}"
+
+***
+
 ### kafka_broker_deployment_strategy
 
 Deployment strategy for Kafka. Set to parallel to run all provisionging tasks in parallel on all hosts, which may cause downtime.
@@ -4071,6 +4439,14 @@ Default:  false
 ### zookeeper_pause_rolling_deployment
 
 Boolean to Pause Rolling Deployment after each Zookeeper Node starts up.
+
+Default:  "{{pause_rolling_deployment}}"
+
+***
+
+### kafka_controller_pause_rolling_deployment
+
+Boolean to Pause Rolling Deployment after each Kafka controller Node starts up.
 
 Default:  "{{pause_rolling_deployment}}"
 
@@ -4242,35 +4618,43 @@ Default:  "https://packages.confluent.io"
 
 ***
 
+### custom_java_path
+
+Full pre-existing Java path on custom nodes. CP-Ansible will use the provided path and will skip installing java as part of execution
+
+Default:  ""
+
+***
+
 ### install_java
 
-Boolean to have cp-ansible install Java on hosts
+Boolean to have cp-ansible install Java on Hosts depending on custom_java_path provided
 
-Default:  true
+Default:  "{{ false if custom_java_path | length > 0 else true }}"
 
 ***
 
 ### redhat_java_package_name
 
-Java Package to install on RHEL/Centos hosts. Possible values java-1.8.0-openjdk or java-11-openjdk
+Java Package to install on RHEL/Centos hosts. Possible values java-8-openjdk, java-11-openjdk or java-17-openjdk
 
-Default:  java-11-openjdk
+Default:  java-17-openjdk
 
 ***
 
 ### debian_java_package_name
 
-Java Package to install on Debian hosts. Possible values openjdk-8-jdk or openjdk-11-jdk
+Java Package to install on Debian hosts. Possible values openjdk-11-jdk, openjdk-8-jdk or openjdk-17-jdk
 
-Default:  openjdk-11-jdk
+Default:  openjdk-17-jdk
 
 ***
 
 ### ubuntu_java_package_name
 
-Java Package to install on Ubuntu hosts. Possible values openjdk-8-jdk or openjdk-11-jdk
+Java Package to install on Ubuntu hosts. Possible values openjdk-8-jdk, openjdk-11-jdk or openjdk-17-jdk
 
-Default:  openjdk-11-jdk
+Default:  openjdk-17-jdk
 
 ***
 
@@ -4350,7 +4734,7 @@ Default:  "https://s3-us-west-2.amazonaws.com/confluent.cloud"
 
 A path reference to a local archive file or URL. By default this is the URL from Confluent CLI repository.
 
-Default:  "{{confluent_cli_repository_baseurl}}/confluent-cli/archives/{{confluent_cli_version}}/{{confluent_cli_binary}}_{{(confluent_cli_version == 'latest') | ternary('', 'v')}}{{confluent_cli_version}}_{{ansible_system|lower}}_{{confluent_cli_goarch[ansible_architecture]}}.tar.gz"
+Default:  "{{confluent_cli_repository_baseurl}}/confluent-cli/archives/{{confluent_cli_version}}/{{confluent_cli_binary}}_{{(confluent_cli_version is version('3.0.0', '>=')) | ternary('', 'v')}}{{confluent_cli_version}}_{{ansible_system|lower}}_{{confluent_cli_goarch[ansible_architecture]}}.tar.gz"
 
 ***
 
@@ -4639,6 +5023,14 @@ Default:
 ### kafka_connect_health_check_delay
 
 Time in seconds to wait before starting Connect Health Checks.
+
+Default:  30
+
+***
+
+### kafka_connect_deploy_connector_timeout
+
+Time in seconds to wait while deploying kafka connector
 
 Default:  30
 
@@ -5061,6 +5453,14 @@ Default:  30
 # ssl
 
 Below are the supported variables for the role ssl
+
+***
+
+### keystore_expiration_days
+
+Set this variable to customize expiration days for keystore. Applies for all components of Confluent Platform.
+
+Default:  365
 
 ***
 

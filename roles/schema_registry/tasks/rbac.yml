@@ -7,9 +7,9 @@
     user: "{{schema_registry_user}}"
     group: "{{schema_registry_group}}"
 
-- name: Grant role System Admin to Additional Schema Registry Super Users
+- name: Grant role System Admin to Additional Schema Registry users/groups
   uri:
-    url: "{{mds_bootstrap_server_urls.split(',')[0]}}/security/1.0/principals/User:{{item}}/roles/SystemAdmin"
+    url: "{{mds_bootstrap_server_urls.split(',')[0]}}/security/1.0/principals/{% if 'User' not in item and 'Group' not in item %}User:{% endif %}{{item}}/roles/SystemAdmin"
     method: POST
     validate_certs: false
     force_basic_auth: true
@@ -28,7 +28,7 @@
     status_code: 204
   register: sr_mds_result
   until: sr_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   loop: "{{schema_registry_additional_system_admins}}"
   when: not ansible_check_mode
@@ -54,7 +54,7 @@
     status_code: 204
   register: sr_mds_result
   until: sr_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   when: not ansible_check_mode
 
@@ -97,6 +97,6 @@
     status_code: 204
   register: sr_mds_result
   until: sr_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   when: not ansible_check_mode

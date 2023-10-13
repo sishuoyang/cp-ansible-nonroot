@@ -21,27 +21,41 @@
   vars:
     service_name: "{{ kafka_rest_service_name }}"
   when: installation_method == "package"
-  tags: package
+  tags:
+    - package
+    - cp_package
 
 - name: Install the Kafka Rest Packages
   yum:
     name: "{{ kafka_rest_packages | product([confluent_package_redhat_suffix]) | map('join') | list }}"
     state: latest
+  register: install_kafka_rest_package_result
+  until: install_kafka_rest_package_result is success or ansible_check_mode
+  retries: 5
+  delay: 90
   when:
     - ansible_os_family == "RedHat"
     - installation_method == "package"
   ignore_errors: "{{ ansible_check_mode }}"
-  tags: package
+  tags:
+    - package
+    - cp_package
   notify: restart kafka-rest
 
 - name: Install the Kafka Rest Packages
   apt:
     name: "{{ kafka_rest_packages | product([confluent_package_debian_suffix]) | map('join') | list }}"
+  register: install_kafka_rest_package_result
+  until: install_kafka_rest_package_result is success or ansible_check_mode
+  retries: 5
+  delay: 90
   when:
     - ansible_os_family == "Debian"
     - installation_method == "package"
   ignore_errors: "{{ ansible_check_mode }}"
-  tags: package
+  tags:
+    - package
+    - cp_package
   notify: restart kafka-rest
 
 - name: Create Kafka Rest Group
@@ -75,7 +89,7 @@
     src: "{{binary_base_path}}/lib/systemd/system/{{kafka_rest.systemd_file|basename}}"
     remote_src: true
     dest: "{{kafka_rest.systemd_file}}"
-    mode: 0644
+    mode: '644'
     force: true
   when: installation_method == "archive"
   tags:
@@ -92,7 +106,7 @@
     service_name: kafka_rest
     user: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
-    hostnames: "{{ [inventory_hostname, ansible_fqdn, ansible_host, ansible_ssh_host, hostname|default(omit)] | unique }}"
+    hostnames: "{{ [inventory_hostname, ansible_fqdn, ansible_host, ansible_ssh_host|default(omit), hostname|default(omit)] | unique }}"
     ca_cert_path: "{{kafka_rest_ca_cert_path}}"
     cert_path: "{{kafka_rest_cert_path}}"
     key_path: "{{kafka_rest_key_path}}"
@@ -136,7 +150,7 @@
   file:
     path: /var/ssl/private
     state: directory
-    mode: 0755
+    mode: '755'
   when: rbac_enabled|bool
   tags:
     - filesystem
@@ -147,6 +161,9 @@
     path: "{{ token_services_public_pem_file }}"
   register: krest_public_pem_file
   delegate_to: localhost
+  vars:
+    ansible_connection: local
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Debug
   ansible.builtin.debug:
@@ -172,7 +189,7 @@
   file:
     path: "{{ kafka_rest.config_file | dirname }}"
     state: directory
-    mode: 0750
+    mode: '750'
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
   tags:
@@ -182,7 +199,7 @@
   template:
     src: kafka-rest.properties.j2
     dest: "{{kafka_rest.config_file}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
   notify: restart kafka-rest
@@ -208,7 +225,7 @@
     - configuration
   when:
     - kafka_rest_secrets_protection_enabled|bool
-    - rbac_enabled|bool
+    - rbac_enabled|bool or confluent_cli_version is version('3.0.0', '>=')
 
 - name: Create Logs Directory
   file:
@@ -216,7 +233,7 @@
     state: directory
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
-    mode: 0770
+    mode: '770'
   tags:
     - filesystem
     - log
@@ -240,7 +257,7 @@
     path: "{{kafka_rest.log4j_file}}"
     group: "{{kafka_rest_group}}"
     owner: "{{kafka_rest_user}}"
-    mode: 0640
+    mode: '640'
   tags:
     - configuration
     - log
@@ -249,7 +266,7 @@
   file:
     path: "{{ logredactor_rule_path | dirname }}"
     state: directory
-    mode: 0755
+    mode: '755'
   when: (kafka_rest_custom_log4j|bool) and (logredactor_enabled|bool) and (logredactor_rule_url == '')
   tags:
     - log
@@ -258,7 +275,7 @@
   copy:
     src: "{{ logredactor_rule_path_local }}"
     dest: "{{ logredactor_rule_path }}"
-    mode: 0644
+    mode: '644'
   when: (kafka_rest_custom_log4j|bool) and (logredactor_enabled|bool) and (logredactor_rule_url == '')
   tags:
     - log
@@ -288,7 +305,7 @@
   template:
     src: kafka_rest_jolokia.properties.j2
     dest: "{{kafka_rest_jolokia_config}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
   when: kafka_rest_jolokia_enabled|bool
@@ -301,7 +318,7 @@
   copy:
     src: "{{kafka_rest_jmxexporter_config_source_path}}"
     dest: "{{kafka_rest_jmxexporter_config_path}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
   when: kafka_rest_jmxexporter_enabled|bool
@@ -312,7 +329,7 @@
   template:
     src: jaas.conf.j2
     dest: "{{kafka_rest.jaas_file}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
   notify: restart kafka-rest
@@ -322,7 +339,7 @@
   template:
     src: password.properties.j2
     dest: "{{kafka_rest.password_file}}"
-    mode: 0640
+    mode: '640'
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
   notify: restart kafka-rest
@@ -334,21 +351,23 @@
     owner: "{{kafka_rest_user}}"
     group: "{{kafka_rest_group}}"
     state: directory
-    mode: 0640
+    mode: '640'
   tags:
     - systemd
+    - privileged
 
 - name: Write Service Overrides
   template:
     src: override.conf.j2
     dest: "{{kafka_rest.systemd_override}}"
-    mode: 0640
+    mode: '640'
     owner: root
     group: root
   notify: restart kafka-rest
   diff: "{{ not mask_sensitive_diff|bool }}"
   tags:
     - systemd
+    - privileged
 
 - name: (Non-root deployment) Create Start Script
   include_tasks: create_start_script.yml

@@ -11,9 +11,9 @@
     user: "{{ksql_user}}"
     group: "{{ksql_group}}"
 
-- name: Grant role System Admin to Additional KSQL Super Users
+- name: Grant role System Admin to Additional KSQL users/groups
   uri:
-    url: "{{mds_bootstrap_server_urls.split(',')[0]}}/security/1.0/principals/User:{{item}}/roles/SystemAdmin"
+    url: "{{mds_bootstrap_server_urls.split(',')[0]}}/security/1.0/principals/{% if 'User' not in item and 'Group' not in item %}User:{% endif %}{{item}}/roles/SystemAdmin"
     method: POST
     validate_certs: false
     force_basic_auth: true
@@ -32,7 +32,7 @@
     status_code: 204
   register: ksql_mds_result
   until: ksql_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   loop: "{{ksql_additional_system_admins}}"
   when: not ansible_check_mode
@@ -64,7 +64,7 @@
     status_code: 204
   register: ksql_mds_result
   until: ksql_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   when: not ansible_check_mode
 
@@ -102,7 +102,7 @@
     status_code: 204
   register: ksql_mds_result
   until: ksql_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   when: not ansible_check_mode
 
@@ -133,7 +133,7 @@
     status_code: 204
   register: ksql_mds_result
   until: ksql_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   when: not ansible_check_mode
 
@@ -165,7 +165,7 @@
     status_code: 204
   register: ksql_mds_result
   until: ksql_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   when: ("'schema_registry' in groups") and not ansible_check_mode
 
@@ -196,7 +196,7 @@
     status_code: 204
   register: ksql_mds_result
   until: ksql_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   when: ksql_monitoring_interceptors_enabled|bool and not ansible_check_mode
 
@@ -229,7 +229,7 @@
     status_code: 204
   register: ksql_mds_result
   until: ksql_mds_result.status == 204
-  retries: 30
+  retries: "{{ mds_retries }}"
   delay: 5
   loop:
     - "{{ksql_ldap_user}}"

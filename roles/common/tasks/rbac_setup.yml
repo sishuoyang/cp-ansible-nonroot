@@ -12,7 +12,7 @@
     force_basic_auth: true
   register: cluster_id_query
   until: cluster_id_query.status == 200
-  retries: 120 # (Non-root) Increasing this to allow time for manual component launching
+  retries: "{{ mds_retries }}"
   delay: 10
   when: cluster_id_source | default('erp') == 'erp'
 
@@ -43,7 +43,7 @@
   file:
     path: "{{ ssl_file_dir_final }}"
     state: directory
-    mode: 0755
+    mode: '755'
   tags:
     - privileged
     - filesystem
@@ -53,6 +53,9 @@
     path: "{{ token_services_public_pem_file }}"
   register: public_pem_file
   delegate_to: localhost
+  vars:
+    ansible_connection: local
+    ansible_become: "{{ ansible_become_localhost }}"
 
 - name: Debug
   ansible.builtin.debug:
@@ -63,7 +66,7 @@
   copy:
     src: "{{token_services_public_pem_file}}"
     dest: "{{rbac_enabled_public_pem_path}}"
-    mode: 0640
+    mode: '640'
     owner: "{{user}}"
     group: "{{group}}"
   when:
