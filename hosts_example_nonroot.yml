@@ -23,6 +23,7 @@ all:
 
     zookeeper_jmxexporter_config_path: "{{ deployment_path }}/jmx_exporter/zookeeper.yml"
     kafka_broker_jmxexporter_config_path: "{{ deployment_path }}/jmx_exporter/kafka.yml"
+    kafka_controller_jmxexporter_config_path: "{{ deployment_path }}/jmx_exporter/kafka_controller.yml"
     schema_registry_jmxexporter_config_path: "{{ deployment_path }}/jmx_exporter/schema_registry.yml"
     kafka_rest_jmxexporter_config_path: "{{ deployment_path }}/jmx_exporter/kafka_rest.yml"
     kafka_connect_jmxexporter_config_path: "{{ deployment_path }}/jmx_exporter/kafka_connect.yml"
@@ -30,6 +31,7 @@ all:
 
     zookeeper_log_dir: "{{ deployment_path }}/log/kafka"
     kafka_broker_log_dir: "{{ deployment_path }}/log/kafka"
+    kafka_controller_log_dir: "{{ deployment_path }}/log/kafka"
     schema_registry_log_dir: "{{ deployment_path }}/log/confluent"
     kafka_rest_log_dir: "{{ deployment_path }}/log/confluent/kafka-rest"
     kafka_connect_log_dir: "{{ deployment_path }}/log/kafka"
@@ -44,6 +46,8 @@ all:
     zookeeper_group: "{{ deployment_group }}"
     kafka_broker_user: "{{ deployment_user }}"
     kafka_broker_group: "{{ deployment_group }}"
+    kafka_controller_user: "{{ deployment_user }}"
+    kafka_controller_group: "{{ deployment_group }}"
     schema_registry_user: "{{ deployment_user }}"
     schema_registry_group: "{{ deployment_group }}"
     kafka_rest_user: "{{ deployment_user }}"
@@ -58,6 +62,7 @@ all:
     # (Non-root) Skip Restarts
     zookeeper_skip_restarts: true
     kafka_broker_skip_restarts: true
+    kafka_controller_skip_restarts: true
     schema_registry_skip_restarts: true
     kafka_rest_skip_restarts: true
     kafka_connect_skip_restarts: true
