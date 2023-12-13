@@ -1,0 +1,19 @@
+#!/bin/bash
+
+IDENTIFIER=org.apache.kafka.connect.cli.ConnectDistributed
+NAME="connect"
+
+PID=$(ps aux | grep $IDENTIFIER | grep java | grep -v grep| awk '{print $2}')
+
+if [ "X$PID" = "X" ]; then
+        echo "$NAME is already stopped"
+        exit
+fi
+
+kill $PID
+echo "Waiting for $NAME to stop..."
+while ps -p $PID >>/dev/null 2>&1
+do
+        sleep 1
+done
+echo "$NAME stopped."

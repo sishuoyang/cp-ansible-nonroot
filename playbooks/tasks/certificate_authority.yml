@@ -75,7 +75,7 @@
           - openssl
           - rsync
         state: present
-      when: ansible_os_family == "RedHat"
+      when: ansible_os_family == "RedHat" and (not nonroot_deployment|bool)
 
     - name: Install OpenSSL and Rsync - Debian
       tags: certificate_authority
@@ -84,7 +84,7 @@
           - openssl
           - rsync
         state: present
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "Debian" and (not nonroot_deployment|bool)
 
     - name: Create SSL Certificate Generation Directory
       tags:
