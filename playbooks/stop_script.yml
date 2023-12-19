@@ -1,4 +1,20 @@
 ---
+- name: Stop Zookeeper
+  hosts: zookeeper
+  gather_facts: false
+  tags: zookeeper
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: confluent.platform.variables
+
+    - name: Stop Zookeeper
+      shell: |
+        {{ start_script_path }}/zookeeper_stop.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
 - name: Stop Kafka Controller
   hosts: kafka_controller
   gather_facts: false
@@ -9,12 +25,11 @@
     - import_role:
         name: confluent.platform.variables
 
-    - name: Run Kafka Controller with Environment Variables
+    - name: Stop Kafka Controller
       shell: |
         {{ start_script_path }}/kafka_controller_stop.sh
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
-
 
 - name: Stop Kafka Broker
   hosts: kafka_broker
@@ -26,7 +41,7 @@
     - import_role:
         name: confluent.platform.variables
 
-    - name: Run Kafka Broker with Environment Variables
+    - name: Stop Kafka Broker
       shell: |
         {{ start_script_path }}/kafka_broker_stop.sh
       environment:
@@ -42,7 +57,7 @@
     - import_role:
         name: confluent.platform.variables
 
-    - name: Run Schema Registry with Environment Variables
+    - name: Stop Schema Registry
       shell: |
         {{ start_script_path }}/schema_registry_stop.sh
       environment:
@@ -58,7 +73,7 @@
     - import_role:
         name: confluent.platform.variables
 
-    - name: Run Kafka Connect with Environment Variables
+    - name: Stop Kafka Connect
       shell: |
         {{ start_script_path }}/kafka_connect_stop.sh
       environment:
@@ -74,7 +89,7 @@
     - import_role:
         name: confluent.platform.variables
 
-    - name: Run Kafka REST with Environment Variables
+    - name: Stop Kafka REST
       shell: |
         {{ start_script_path }}/kafka_rest_stop.sh
       environment:
@@ -90,7 +105,7 @@
     - import_role:
         name: confluent.platform.variables
 
-    - name: Run Control Center with Environment Variables
+    - name: Stop Control Center
       shell: |
         {{ start_script_path }}/control_center_stop.sh
       environment:
@@ -106,7 +121,7 @@
     - import_role:
         name: confluent.platform.variables
 
-    - name: Run ksqlDB with Environment Variables
+    - name: Stop ksqlDB
       shell: |
         {{ start_script_path }}/ksql_stop.sh
       environment:

@@ -1,5 +1,80 @@
-
 # CP-Ansible
+
+## Non-root cp-ansible deployments
+
+This fork provides some preliminaries for non-root, no sudo deployments. 
+
+From `7.5.2-post`, this repo is based on: https://github.com/tpham305/nonroot-cp-ansible-7.5.2
+
+Added:
+
+* Scripts for Zookeeper deployments
+
+### What works and what does not
+What works out of the box:
+
+* Basic setup and configuration of most Confluent Platform components (excluding Confluent Replicator)
+* TLS Encryption
+* SASL authentication
+
+What should work but is not yet tested:
+
+* Kerberos authentication
+* Role-based Access Control (RBAC) (see: https://docs.confluent.io/platform/current/security/rbac/)
+    * Refer to the section on [RBAC Setup](#rbac-setup)
+
+What is not supported, or requires additional manual steps:
+
+* Confluent Replicator
+
+### Deployment in non-root environments
+
+Deployment prerequisites are similar to that of regular `cp-ansible`. Please refer to the details to build and install this `ansible-galaxy` collection for an air-gapped environment at https://docs.confluent.io/ansible/current/ansible-airgap.html.
+
+To deploy, use additional tags:
+
+```
+ansible-playbook -i hosts_example_nonroot.yml confluent.platform.all --skip-tags privileged,package,systemd,sysctl,health_check
+```
+
+The above will prepare the files on the hosts for all the components.
+
+```
+ansible-playbook -i hosts_example_nonroot.yml confluent.platform.create_service_script
+```
+
+The above will create start scripts that can be used to start the components.
+
+To start components:
+
+```
+ansible-playbook -i hosts_example_nonroot.yml confluent.platform.start_script
+```
+
+To stop components:
+
+```
+ansible-playbook -i hosts_example_nonroot.yml confluent.platform.stop_script
+```
+
+### RBAC Setup
+
+The playbook tasks around RBAC require that the Kafka Brokers (specifically, the embedded REST proxy) are running before they can function.
+
+To increase the number of retries around the task "Get Kafka Cluster ID from Embedded Rest Proxy", configure the parameter `mds_retries` in the hosts file.
+Alternatively, the user can simply terminate the playbook (`Ctrl + C`), and restart the playbook with `--skip-tags zookeeper`.
+
+High-level steps as follows:
+
+* Create the start scripts for all components first:
+    * `ansible-playbook -i hosts_example_nonroot.yml confluent.platform.confluent.platform.create_service_script`
+* Run the playbook (see above) to set up Zookeeper, Kafka Brokers
+* At the task "Get Kafka Cluster ID from Embedded Rest Proxy":
+    * Manually start Zookeepers and Kafka Brokers or use the script:
+        * `ansible-playbook -i hosts_example_nonroot.yml confluent.platform.start_script --tags zookeeper,kafka_broker`
+* The playbook will continue to the end
+* Start the remaining Confluent Platform components:
+    * `ansible-playbook -i hosts_example_nonroot.yml confluent.platform.start_script --skip-tags zookeeper,kafka_broker`
 
 ## Introduction
 
