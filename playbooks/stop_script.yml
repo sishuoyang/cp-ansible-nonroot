@@ -15,6 +15,10 @@
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
 
+    - name: Shutdown Delay (10s)
+      wait_for:
+        timeout: 10
+
 - name: Stop ksqlDB
   hosts: ksql
   gather_facts: false
@@ -30,6 +34,10 @@
         {{ start_script_path }}/ksql_stop.sh
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Shutdown Delay (10s)
+      wait_for:
+        timeout: 10
 
 - name: Stop Kafka REST
   hosts: kafka_rest
@@ -47,6 +55,10 @@
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
 
+    - name: Shutdown Delay (10s)
+      wait_for:
+        timeout: 10
+
 - name: Stop Kafka Connect
   hosts: kafka_connect
   gather_facts: false
@@ -62,6 +74,10 @@
         {{ start_script_path }}/kafka_connect_stop.sh
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Shutdown Delay (10s)
+      wait_for:
+        timeout: 10
 
 - name: Stop Schema Registry
   hosts: schema_registry
@@ -79,6 +95,10 @@
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
 
+    - name: Shutdown Delay (10s)
+      wait_for:
+        timeout: 10
+
 - name: Stop Kafka Broker
   hosts: kafka_broker
   gather_facts: false
@@ -94,6 +114,10 @@
         {{ start_script_path }}/kafka_broker_stop.sh
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Shutdown Delay (30s)
+      wait_for:
+        timeout: 30
 
 - name: Stop Zookeeper
   hosts: zookeeper
@@ -111,6 +135,10 @@
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
 
+    - name: Shutdown Delay (10s)
+      wait_for:
+        timeout: 10
+
 - name: Stop Kafka Controller
   hosts: kafka_controller
   gather_facts: false
@@ -126,3 +154,7 @@
         {{ start_script_path }}/kafka_controller_stop.sh
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
+
+    - name: Shutdown Delay (10s)
+      wait_for:
+        timeout: 10
