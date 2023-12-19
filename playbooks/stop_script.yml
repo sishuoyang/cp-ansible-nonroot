@@ -1,100 +1,4 @@
 ---
-- name: Stop Zookeeper
-  hosts: zookeeper
-  gather_facts: false
-  tags: zookeeper
-  vars:
-    ansible_os_family: OS
-  tasks:
-    - import_role:
-        name: confluent.platform.variables
-
-    - name: Stop Zookeeper
-      shell: |
-        {{ start_script_path }}/zookeeper_stop.sh
-      environment:
-        # JAVA_HOME: "/cp-data/openjdk11"
-
-- name: Stop Kafka Controller
-  hosts: kafka_controller
-  gather_facts: false
-  tags: kafka_controller
-  vars:
-    ansible_os_family: OS
-  tasks:
-    - import_role:
-        name: confluent.platform.variables
-
-    - name: Stop Kafka Controller
-      shell: |
-        {{ start_script_path }}/kafka_controller_stop.sh
-      environment:
-        # JAVA_HOME: "/cp-data/openjdk11"
-
-- name: Stop Kafka Broker
-  hosts: kafka_broker
-  gather_facts: false
-  tags: kafka_broker
-  vars:
-    ansible_os_family: OS
-  tasks:
-    - import_role:
-        name: confluent.platform.variables
-
-    - name: Stop Kafka Broker
-      shell: |
-        {{ start_script_path }}/kafka_broker_stop.sh
-      environment:
-        # JAVA_HOME: "/cp-data/openjdk11"
-
-- name: Stop Schema Registry
-  hosts: schema_registry
-  gather_facts: false
-  tags: schema_registry
-  vars:
-    ansible_os_family: OS
-  tasks:
-    - import_role:
-        name: confluent.platform.variables
-
-    - name: Stop Schema Registry
-      shell: |
-        {{ start_script_path }}/schema_registry_stop.sh
-      environment:
-        # JAVA_HOME: "/cp-data/openjdk11"
-
-- name: Stop Kafka Connect
-  hosts: kafka_connect
-  gather_facts: false
-  tags: kafka_connect
-  vars:
-    ansible_os_family: OS
-  tasks:
-    - import_role:
-        name: confluent.platform.variables
-
-    - name: Stop Kafka Connect
-      shell: |
-        {{ start_script_path }}/kafka_connect_stop.sh
-      environment:
-        # JAVA_HOME: "/cp-data/openjdk11"
-
-- name: Stop Kafka REST
-  hosts: kafka_rest
-  gather_facts: false
-  tags: kafka_rest
-  vars:
-    ansible_os_family: OS
-  tasks:
-    - import_role:
-        name: confluent.platform.variables
-
-    - name: Stop Kafka REST
-      shell: |
-        {{ start_script_path }}/kafka_rest_stop.sh
-      environment:
-        # JAVA_HOME: "/cp-data/openjdk11"
-
 - name: Stop Control Center
   hosts: control_center
   gather_facts: false
@@ -124,5 +28,101 @@
     - name: Stop ksqlDB
       shell: |
         {{ start_script_path }}/ksql_stop.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+- name: Stop Kafka REST
+  hosts: kafka_rest
+  gather_facts: false
+  tags: kafka_rest
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: confluent.platform.variables
+
+    - name: Stop Kafka REST
+      shell: |
+        {{ start_script_path }}/kafka_rest_stop.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+- name: Stop Kafka Connect
+  hosts: kafka_connect
+  gather_facts: false
+  tags: kafka_connect
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: confluent.platform.variables
+
+    - name: Stop Kafka Connect
+      shell: |
+        {{ start_script_path }}/kafka_connect_stop.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+- name: Stop Schema Registry
+  hosts: schema_registry
+  gather_facts: false
+  tags: schema_registry
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: confluent.platform.variables
+
+    - name: Stop Schema Registry
+      shell: |
+        {{ start_script_path }}/schema_registry_stop.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+- name: Stop Kafka Broker
+  hosts: kafka_broker
+  gather_facts: false
+  tags: kafka_broker
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: confluent.platform.variables
+
+    - name: Stop Kafka Broker
+      shell: |
+        {{ start_script_path }}/kafka_broker_stop.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+- name: Stop Zookeeper
+  hosts: zookeeper
+  gather_facts: false
+  tags: zookeeper
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: confluent.platform.variables
+
+    - name: Stop Zookeeper
+      shell: |
+        {{ start_script_path }}/zookeeper_stop.sh
+      environment:
+        # JAVA_HOME: "/cp-data/openjdk11"
+
+- name: Stop Kafka Controller
+  hosts: kafka_controller
+  gather_facts: false
+  tags: kafka_controller
+  vars:
+    ansible_os_family: OS
+  tasks:
+    - import_role:
+        name: confluent.platform.variables
+
+    - name: Stop Kafka Controller
+      shell: |
+        {{ start_script_path }}/kafka_controller_stop.sh
       environment:
         # JAVA_HOME: "/cp-data/openjdk11"
