@@ -4,6 +4,67 @@ Ansible Playbooks for Confluent Platform - Release Notes
 
 .. contents:: Topics
 
+v7.7.1
+======
+
+Notable enhancements
+-------------
+
+- Updated default confluent cli version to 3.65.0
+
+Notable fixes
+-------------
+
+- Critical security and vulnerability issues were fixed
+
+v7.7.0
+======
+
+New features
+-------------
+- OAuth & OIDC capabilities added for Confluent Server, C3, SR, Connect and REST Proxy
+- Migration of existing clusters from LDAP to LDAP+OAuth is supported
+
+Notable enhancements
+-------------
+
+- Amazonlinux 2023 and Debian 12 Operating Systems are now supported
+- Ansible Versions 8 and 9 are now supported
+- IdP with Self Signed Certs is now supported
+
+v7.6.1
+======
+
+Notable enhancements
+-------------
+
+- Updated default confluent cli version to 3.55.0
+
+Notable fixes
+-------------
+
+- Connect and Ksqldb clusters are correctly registered even for co-located components
+- Critical security and vulnerability issues were fixed
+
+
+
+v7.6.0
+======
+
+New features
+-------------
+
+- In place upgrade from Zookeeper to Kraft is now supported
+- ARM64 architecture is now supported in production
+- Deploying connectors now supported on clusters with RBAC & mTLS
+
+Notable enhancements
+-------------
+
+- Rocky Linux 8 and Rocky Linux 9 Operating Systems are now supported
+- Discovery has been de-coupled from cp-ansible and is now a present in separate repo named cp-discovery
+- Custom port can now be used in Kraft Controller listener
+
 v7.5.2
 ======
 

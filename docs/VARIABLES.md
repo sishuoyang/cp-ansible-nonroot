@@ -8,7 +8,7 @@ Below are the supported variables for the role variables
 
 Version of Confluent Platform to install
 
-Default:  7.5.2
+Default:  7.7.1
 
 ***
 
@@ -54,7 +54,7 @@ Default:  true
 
 ### jolokia_enabled
 
-Boolean to enable Jolokia Agent installation and configuration on all components
+Boolean to enable Jolokia Agent installation and configuration on all components.
 
 Default:  false
 
@@ -456,7 +456,7 @@ Default:  "/usr/local/bin/confluent"
 
 Confluent CLI version to download (e.g. "1.9.0"). Support matrix https://docs.confluent.io/platform/current/installation/versions-interoperability.html#confluent-cli
 
-Default:  3.30.1
+Default:  3.65.0
 
 ***
 
@@ -924,6 +924,22 @@ Default:  "{{ skip_restarts }}"
 
 ***
 
+### kraft_migration
+
+Boolean to enable zookeeper to kraft migration
+
+Default:  false
+
+***
+
+### metadata_migration_retries
+
+Parameter to increase the number of retries for Metadata Migration API request
+
+Default:  10
+
+***
+
 ### kafka_controller_quorum_voters
 
 Default controller quorum voters
@@ -937,6 +953,14 @@ Default:  "{% for controller_hostname in groups.kafka_controller|default([]) %}{
 Default Kafka config prefix. Only valid to customize when installation_method: archive
 
 Default:  "{{ config_prefix }}/controller"
+
+***
+
+### kafka_controller_port
+
+Port to expose Kraft Controller
+
+Default:  9093
 
 ***
 
@@ -982,7 +1006,7 @@ Default:  "{{kafka_controller_default_group}}"
 
 ### kafka_controller_log_dir
 
-Set this variable to customize the directory that the Kafka controller writes log files to. Default location is /var/log/kafka.
+Set this variable to customize the directory that the Kafka controller writes log files to. Default location is /var/log/controller.
 
 Default:  "{{kafka_controller_default_log_dir}}"
 
@@ -990,9 +1014,9 @@ Default:  "{{kafka_controller_default_log_dir}}"
 
 ### kafka_controller_jolokia_enabled
 
-Boolean to enable Jolokia Agent installation and configuration on kafka
+Boolean to enable Jolokia Agent installation and configuration on kafka. Jolokia is required in Kraft Controller during ZK to Kraft migration
 
-Default:  "{{jolokia_enabled}}"
+Default:  "{{jolokia_enabled or kraft_migration}}"
 
 ***
 
@@ -1564,6 +1588,14 @@ Default:  "{{ skip_restarts }}"
 
 ***
 
+### schema_registry_auth_mode
+
+Variable to set auth mode on Schema Registry. Possible values are oauth, ldap, ldap_with_oauth in RBAC cluster and oauth, none in non RBAC cluster.
+
+Default:  "{{ auth_mode }}"
+
+***
+
 ### kafka_rest_config_prefix
 
 Default Kafka Rest config prefix. Only valid to customize when installation_method: archive
@@ -1745,6 +1777,14 @@ Default:  "{{ monitoring_interceptors_enabled }}"
 Boolean used for disabling of systemd service restarts when rootless install is executed
 
 Default:  "{{ skip_restarts }}"
+
+***
+
+### kafka_rest_auth_mode
+
+Variable to set auth mode on Rest Proxy. Possible values are oauth, ldap, ldap_with_oauth in RBAC cluster and oauth, none in non RBAC cluster.
+
+Default:  "{{ auth_mode }}"
 
 ***
 
@@ -2004,11 +2044,27 @@ Default:  ""
 
 ***
 
+### kafka_connect_connector_white_list
+
+Set this variable with a comma separated list of Topics for Kafka Connect Connector to produce/consume from.  This is a mandatory variable when creating Connector in RBAC cluster.
+
+Default:  ""
+
+***
+
 ### kafka_connect_skip_restarts
 
 Boolean used for disabling of systemd service restarts when rootless install is executed
 
 Default:  "{{ skip_restarts }}"
+
+***
+
+### kafka_connect_auth_mode
+
+Variable to set auth mode on Kafka Connect server. Possible values are oauth, ldap, ldap_with_oauth in RBAC cluster and oauth, none in non RBAC cluster.
+
+Default:  "{{ auth_mode }}"
 
 ***
 
@@ -2422,7 +2478,7 @@ Default:  none
 
 ### sso_authorize_uri
 
-Endpoint for an OAuth authorization request
+Endpoint for an OAuth authorization request in Control Center
 
 Default:  none
 
@@ -2468,6 +2524,126 @@ Default:  true
 
 ***
 
+### sso_idp_cert_path
+
+SSL certificate (full path of file on control node) of IDP Domain for SSO in C3/cli. Optional, needed when IDP server has TLS enabled with custom certificate
+
+Default:  ""
+
+***
+
+### sso_cli
+
+Boolean to enable SSO in confluent cli. If enabling SSO in cli, you must also provide sso_device_authorization_uri.
+
+Default:  false
+
+***
+
+### sso_device_authorization_uri
+
+Device Authorization endpoint of Idp, Required to enable SSO in cli.
+
+Default:  none
+
+***
+
+### auth_mode
+
+Authorization mode on all cp components. Possible values are ldap, oauth, ldap_with_oauth and none. Set this to oauth for OAuth cluster and ldap_with_oauth for cluster with both ldap and oauth support. When set to oauth or ldap_with_oauth, you must set oauth_jwks_uri, oauth_token_uri, oauth_issuer_url, oauth_superuser_client_id, oauth_superuser_client_password.
+
+Default:  "{% if rbac_enabled|bool %}ldap{% else %}none{% endif %}"
+
+***
+
+### oauth_superuser_client_id
+
+Client id used to authorize and request token from IdP via cp components. This is the super user for all MDS api calls
+
+Default:  none
+
+***
+
+### oauth_superuser_client_password
+
+Client secret for authorize and token request to IdP via cp components
+
+Default:  none
+
+***
+
+### oauth_superuser_principal
+
+Service principal for OAuth client in IdPserver. Defaults to client id. Needs to be modified based on OAuth JWT token's field pointed by oauth_sub_claim
+
+Default:  "{{oauth_superuser_client_id}}"
+
+***
+
+### oauth_token_uri
+
+IdP token endpoint, from where a token is requested by MDS when OAuth is enabled
+
+Default:  none
+
+***
+
+### oauth_issuer_url
+
+The issuer url, which is typically the authorization server's URL. This value is used to compare to issuer claim in the JWT token for verification
+
+Default:  none
+
+***
+
+### oauth_jwks_uri
+
+The OAuth/OIDC provider URL from which the provider's JWKS (JSON Web Key Set) can be retrieved.
+
+Default:  none
+
+***
+
+### oauth_groups_claim
+
+This optional setting provides the name of claim to use for the groups in the JWT. If not provided, groups of principal will be empty.
+
+Default:  none
+
+***
+
+### oauth_groups_scope
+
+If any additional scope is needed to include groups in the OAuth token, this config is optional based on Idp.
+
+Default:  none
+
+***
+
+### oauth_sub_claim
+
+This optional setting can provide a different name to use for the subject included in the JWT
+
+Default:  sub
+
+***
+
+### oauth_expected_audience
+
+The optional comma-delimited setting for MDS to use to verify that the JWT was issued for one of the expected audiences.
+
+Default:  none
+
+***
+
+### oauth_idp_cert_path
+
+SSL certificate (full path of file on control node) of IDP Domain. Optional, needed when IDP server has TLS enabled with custom certificate
+
+Default:  ""
+
+***
+
 ### mds_super_user
 
 LDAP User which will be granted super user permissions to create role bindings in the MDS
@@ -2508,6 +2684,22 @@ Default:  "{{mds_super_user_password}}"
 
 ***
 
+### kafka_broker_oauth_user
+
+OAuth Client Id for Kafka broker Service to authenticate as
+
+Default:  "{{oauth_superuser_client_id}}"
+
+***
+
+### kafka_broker_oauth_password
+
+Client Secret for kafka_broker_oauth_user
+
+Default:  "{{oauth_superuser_client_password}}"
+
+***
+
 ### kafka_controller_ldap_user
 
 LDAP User for Kafkas Embedded Rest Service to authenticate as
@@ -2521,6 +2713,22 @@ Default:  "{{mds_super_user}}"
 Password to kafka_controller_ldap_user LDAP User
 
 Default:  "{{mds_super_user_password}}"
+
+***
+
+### kafka_controller_oauth_user
+
+OAuth Client Id for Kafka Controller Service to authenticate as
+
+Default:  "{{oauth_superuser_client_id}}"
+
+***
+
+### kafka_controller_oauth_password
+
+Client Secret to kafka_controller_oauth_user
+
+Default:  "{{oauth_superuser_client_password}}"
 
 ***
 
@@ -2548,6 +2756,30 @@ Default:  password
 
 ***
 
+### schema_registry_oauth_user
+
+OAuth Client Id for Schema Registry to authenticate as
+
+Default:  schema-registry
+
+***
+
+### schema_registry_oauth_password
+
+Client Secret for schema_registry_oauth_user
+
+Default:  password
+
+***
+
+### schema_registry_oauth_principal
+
+Service principal for SR client in IdPserver. Defaults to SR Client Id
+
+Default:  "{{ schema_registry_oauth_user }}"
+
+***
+
 ### kafka_connect_ldap_user
 
 LDAP User for Connect to authenticate as
@@ -2561,6 +2793,30 @@ Default:  connect
 Password to kafka_connect_ldap_user LDAP User
 
 Default:  password
+
+***
+
+### kafka_connect_oauth_user
+
+OAuth Client Id for Connect to authenticate as
+
+Default:  connect
+
+***
+
+### kafka_connect_oauth_password
+
+Client Secret for kafka_connect_oauth_user
+
+Default:  password
+
+***
+
+### kafka_connect_oauth_principal
+
+Service principal for Connect client in IdPserver. Defaults to Connect Client Id
+
+Default:  "{{ kafka_connect_oauth_user }}"
 
 ***
 
@@ -2580,6 +2836,30 @@ Default:  password
 
 ***
 
+### ksql_oauth_user
+
+OAuth Client Id for ksql to authenticate as
+
+Default:  ksql
+
+***
+
+### ksql_oauth_password
+
+Client Secret for ksql_oauth_user
+
+Default:  password
+
+***
+
+### ksql_oauth_principal
+
+Service principal for Ksql client in IdPserver. Defaults to Ksql Client Id
+
+Default:  "{{ ksql_oauth_user }}"
+
+***
+
 ### kafka_rest_ldap_user
 
 LDAP User for Rest Proxy to authenticate as
@@ -2593,6 +2873,30 @@ Default:  kafka-rest
 Password to kafka_rest_ldap_user LDAP User
 
 Default:  password
+
+***
+
+### kafka_rest_oauth_user
+
+OAuth Client Id for Rest Proxy to authenticate as
+
+Default:  kafka-rest
+
+***
+
+### kafka_rest_oauth_password
+
+Client Secret for kafka_rest_oauth_user
+
+Default:  password
+
+***
+
+### kafka_rest_oauth_principal
+
+Service principal for Rest Proxy client in IdPserver. Defaults to Rest proxy Client Id
+
+Default:  "{{ kafka_rest_oauth_user }}"
 
 ***
 
@@ -2612,6 +2916,30 @@ Default:  password
 
 ***
 
+### control_center_oauth_user
+
+OAuth Client Id for Control Center to authenticate as
+
+Default:  control-center
+
+***
+
+### control_center_oauth_password
+
+Client Secret for control_center_oauth_user
+
+Default:  password
+
+***
+
+### control_center_oauth_principal
+
+Service principal for Control Center client in IdPserver. Defaults to Control Center Client Id
+
+Default:  "{{ control_center_oauth_user }}"
+
+***
+
 ### kafka_connect_replicator_ldap_user
 
 LDAP User for Confluent Replicator to authenticate as
@@ -2625,6 +2953,30 @@ Default:  replicator
 Password for kafka_connect_replicator_ldap_user LDAP User
 
 Default:  password
+
+***
+
+### kafka_connect_replicator_oauth_user
+
+OAuth Client Id for Confluent Replicator to authenticate as
+
+Default:  replicator
+
+***
+
+### kafka_connect_replicator_oauth_password
+
+Client Secret for kafka_connect_replicator_oauth_user OAuth User
+
+Default:  password
+
+***
+
+### kafka_connect_replicator_oauth_principal
+
+Service principal for kafka_connect_replicator client in IdPserver. Defaults to Connect Replicator Client Id
+
+Default:  "{{ kafka_connect_replicator_oauth_user }}"
 
 ***
 
@@ -2644,6 +2996,30 @@ Default:  "{{kafka_connect_replicator_ldap_password}}"
 
 ***
 
+### kafka_connect_replicator_consumer_oauth_user
+
+OAuth Client Id for Confluent Replicator Consumer to authenticate as
+
+Default:  "{{ kafka_connect_replicator_oauth_user }}"
+
+***
+
+### kafka_connect_replicator_consumer_oauth_password
+
+Client Secret for kafka_connect_replicator_consumer_oauth_user OAuth User
+
+Default:  "{{ kafka_connect_replicator_oauth_password }}"
+
+***
+
+### kafka_connect_replicator_consumer_oauth_principal
+
+Service principal for kafka_connect_consumer_replicator client in IdPserver. Defaults to Connect Replicator Consumer Client Id
+
+Default:  "{{ kafka_connect_replicator_consumer_oauth_user }}"
+
+***
+
 ### kafka_connect_replicator_producer_ldap_user
 
 LDAP User for Confluent Replicator Producer to authenticate as
@@ -2660,6 +3036,30 @@ Default:  "{{kafka_connect_replicator_ldap_password}}"
 
 ***
 
+### kafka_connect_replicator_producer_oauth_user
+
+OAuth Client Id for Confluent Replicator Producer to authenticate as
+
+Default:  "{{ kafka_connect_replicator_oauth_user }}"
+
+***
+
+### kafka_connect_replicator_producer_oauth_password
+
+Client Secret for kafka_connect_replicator_producer_oauth_user OAuth User
+
+Default:  "{{ kafka_connect_replicator_oauth_password }}"
+
+***
+
+### kafka_connect_replicator_producer_oauth_principal
+
+Service principal for kafka_connect_producer_replicator client in IdPserver. Defaults to Connect Replicator Producer Client Id
+
+Default:  "{{ kafka_connect_replicator_producer_oauth_user }}"
+
+***
+
 ### kafka_connect_replicator_monitoring_interceptor_ldap_user
 
 LDAP User for Confluent Replicator Monitoring Interceptor to authenticate as
@@ -2673,6 +3073,30 @@ Default:  "{{kafka_connect_replicator_ldap_user}}"
 Password for kafka_connect_replicator_monitoring_interceptor_ldap_user LDAP User
 
 Default:  "{{kafka_connect_replicator_ldap_password}}"
+
+***
+
+### kafka_connect_replicator_monitoring_interceptor_oauth_user
+
+OAuth Client Id for Confluent Replicator Monitoring Interceptor to authenticate as
+
+Default:  "{{ kafka_connect_replicator_oauth_user }}"
+
+***
+
+### kafka_connect_replicator_monitoring_interceptor_oauth_password
+
+Client Secret for kafka_connect_replicator_monitoring_interceptor_oauth_user OAuth User
+
+Default:  "{{ kafka_connect_replicator_oauth_password }}"
+
+***
+
+### kafka_connect_replicator_monitoring_interceptor_oauth_principal
+
+Service principal for kafka_connect_replicator_monitoring_interceptor client in IdPserver. Defaults to Connect Replicator Monitoring Interceptor Client Id
+
+Default:  "{{ kafka_connect_replicator_monitoring_interceptor_oauth_user }}"
 
 ***
 
@@ -3272,7 +3696,7 @@ Default:  "{{mds_super_user_password}}"
 
 User for authenticated Kafka Admin API Health Check.
 
-Default:  "{{ mds_super_user if rbac_enabled|bool else kafka_broker_rest_proxy_basic_users.admin.principal }}"
+Default:  "{{ kafka_broker_rest_proxy_basic_users.admin.principal }}"
 
 ***
 
@@ -3280,7 +3704,7 @@ Default:  "{{ mds_super_user if rbac_enabled|bool else kafka_broker_rest_proxy_b
 
 Password for authenticated Kafka Admin API Health Check.
 
-Default:  "{{ mds_super_user_password if rbac_enabled|bool else kafka_broker_rest_proxy_basic_users.admin.password }}"
+Default:  "{{ kafka_broker_rest_proxy_basic_users.admin.password }}"
 
 ***
 
@@ -3288,7 +3712,7 @@ Default:  "{{ mds_super_user_password if rbac_enabled|bool else kafka_broker_res
 
 User for authenticated Schema Registry Health Check.
 
-Default:  "{{ schema_registry_ldap_user if rbac_enabled|bool else schema_registry_basic_users_final.admin.principal }}"
+Default:  "{{ schema_registry_basic_users_final.admin.principal }}"
 
 ***
 
@@ -3296,7 +3720,7 @@ Default:  "{{ schema_registry_ldap_user if rbac_enabled|bool else schema_registr
 
 Password for authenticated Schema Registry Health Check.
 
-Default:  "{{ schema_registry_ldap_password if rbac_enabled|bool else schema_registry_basic_users_final.admin.password }}"
+Default:  "{{ schema_registry_basic_users_final.admin.password }}"
 
 ***
 
@@ -3304,7 +3728,7 @@ Default:  "{{ schema_registry_ldap_password if rbac_enabled|bool else schema_reg
 
 User for authenticated Connect Health Check.
 
-Default:  "{{ kafka_connect_ldap_user if rbac_enabled|bool else kafka_connect_basic_users.admin.principal }}"
+Default:  "{{ kafka_connect_basic_users.admin.principal }}"
 
 ***
 
@@ -3312,7 +3736,7 @@ Default:  "{{ kafka_connect_ldap_user if rbac_enabled|bool else kafka_connect_ba
 
 Password for authenticated Connect Health Check. Set if using customized security like Basic Auth.
 
-Default:  "{{ kafka_connect_ldap_password if rbac_enabled|bool else kafka_connect_basic_users.admin.password }}"
+Default:  "{{ kafka_connect_basic_users.admin.password }}"
 
 ***
 
@@ -3320,7 +3744,7 @@ Default:  "{{ kafka_connect_ldap_password if rbac_enabled|bool else kafka_connec
 
 User for authenticated ksqlDB Health Check. Set if using customized security like Basic Auth.
 
-Default:  "{{ ksql_ldap_user if rbac_enabled|bool else ksql_basic_users.admin.principal }}"
+Default:  "{{ ksql_ldap_user if (rbac_enabled|bool and ('ldap' in auth_mode)) else ksql_basic_users.admin.principal }}"
 
 ***
 
@@ -3328,7 +3752,7 @@ Default:  "{{ ksql_ldap_user if rbac_enabled|bool else ksql_basic_users.admin.pr
 
 Password for authenticated ksqlDB Health Check. Set if using customized security like Basic Auth.
 
-Default:  "{{ ksql_ldap_password if rbac_enabled|bool else ksql_basic_users.admin.password }}"
+Default:  "{{ ksql_ldap_password if (rbac_enabled|bool and ('ldap' in auth_mode)) else ksql_basic_users.admin.password }}"
 
 ***
 
@@ -3336,7 +3760,7 @@ Default:  "{{ ksql_ldap_password if rbac_enabled|bool else ksql_basic_users.admi
 
 User for authenticated Rest Proxy Health Check. Set if using customized security like Basic Auth.
 
-Default:  "{{ kafka_rest_ldap_user if rbac_enabled|bool else kafka_rest_basic_users.admin.principal }}"
+Default:  "{{ kafka_rest_basic_users.admin.principal }}"
 
 ***
 
@@ -3344,7 +3768,7 @@ Default:  "{{ kafka_rest_ldap_user if rbac_enabled|bool else kafka_rest_basic_us
 
 Password for authenticated Rest Proxy Health Check. Set if using customized security like Basic Auth.
 
-Default:  "{{ kafka_rest_ldap_password if rbac_enabled|bool else kafka_rest_basic_users.admin.password }}"
+Default:  "{{ kafka_rest_basic_users.admin.password }}"
 
 ***
 
@@ -3352,7 +3776,7 @@ Default:  "{{ kafka_rest_ldap_password if rbac_enabled|bool else kafka_rest_basi
 
 User for authenticated Control Center Health Check. Set if using customized security like Basic Auth.
 
-Default:  "{{ control_center_ldap_user if rbac_enabled|bool else control_center_basic_users.admin.principal }}"
+Default:  "{{ control_center_basic_users.admin.principal }}"
 
 ***
 
@@ -3360,7 +3784,7 @@ Default:  "{{ control_center_ldap_user if rbac_enabled|bool else control_center_
 
 Password for authenticated Control Center Health Check. Set if using customized security like Basic Auth.
 
-Default:  "{{ control_center_ldap_password if rbac_enabled|bool else control_center_basic_users.admin.password }}"
+Default:  "{{ control_center_basic_users.admin.password }}"
 
 ***
 
@@ -3377,6 +3801,14 @@ Default:  "{{ config_prefix }}/kafka-connect-replicator"
 Boolean used for disabling of systemd service restarts when rootless install is executed
 
 Default:  "{{ skip_restarts }}"
+
+***
+
+### kafka_connect_replicator_auth_mode
+
+Variable to set auth mode on Connect Replicator. Possible values are oauth, ldap, ldap_with_oauth in RBAC cluster and oauth, none in non RBAC cluster.
+
+Default:  "{{ auth_mode }}"
 
 ***
 
@@ -3806,7 +4238,7 @@ Default:  localhost:8090
 
 ### kafka_connect_replicator_erp_admin_user
 
-Set this variable to the user name of the admin user for the Embedded Rest Proxy, to configure RBAC.
+Set this variable to the user name of the Ldap admin user for the Embedded Rest Proxy, to configure RBAC.
 
 Default:  ""
 
@@ -3814,7 +4246,23 @@ Default:  ""
 
 ### kafka_connect_replicator_erp_admin_password
 
-Set this variable to the password for the Embedded Rest Proxy user, to configure RBAC.
+Set this variable to the password of the Ldap admin user for the Embedded Rest Proxy user, to configure RBAC.
+
+Default:  ""
+
+***
+
+### kafka_connect_replicator_erp_oauth_user
+
+Set this variable to the Client Id of the OAuth Client for the Embedded Rest Proxy, to configure RBAC.
+
+Default:  ""
+
+***
+
+### kafka_connect_replicator_erp_oauth_password
+
+Set this variable to the Client Secret of OAuth Client for the Embedded Rest Proxy user, to configure RBAC.
 
 Default:  ""
 
@@ -3998,17 +4446,33 @@ Default:  localhost:8090
 
 ### kafka_connect_replicator_consumer_erp_admin_user
 
-Set this variable to the user name of the admin user for the Embedded Rest Proxy, to configure RBAC.
+Set this variable to the user name of the Ldap admin user for the Embedded Rest Proxy, to configure RBAC.
 
-Default:  ""
+Default:  "{{ kafka_connect_replicator_erp_admin_user }}"
 
 ***
 
 ### kafka_connect_replicator_consumer_erp_admin_password
 
-Set this variable to the password for the Embedded Rest Proxy user, to configure RBAC.
+Set this variable to the password of the Ldap admin user for the Embedded Rest Proxy user, to configure RBAC.
 
-Default:  ""
+Default:  "{{ kafka_connect_replicator_erp_admin_password }}"
+
+***
+
+### kafka_connect_replicator_consumer_erp_oauth_user
+
+Set this variable to the Client Id of the OAuth user for the Embedded Rest Proxy, to configure RBAC.
+
+Default:  "{{ kafka_connect_replicator_erp_oauth_user }}"
+
+***
+
+### kafka_connect_replicator_consumer_erp_oauth_password
+
+Set this variable to the Client Secret of the OAuth Client for the Embedded Rest Proxy user, to configure RBAC.
+
+Default:  "{{ kafka_connect_replicator_erp_oauth_password }}"
 
 ***
 
@@ -4201,6 +4665,22 @@ Default:  "{{ kafka_connect_replicator_erp_admin_user }}"
 Set this variable to the password for the Embedded Rest Proxy user, to configure RBAC.  Defaults to match kafka_connect_replicator_erp_admin_password.
 
 Default:  "{{ kafka_connect_replicator_erp_admin_password }}"
+
+***
+
+### kafka_connect_replicator_producer_erp_oauth_user
+
+Set this variable to the Client Id of the OAuth Client for the Embedded Rest Proxy, to configure RBAC.  Defaults to kafka_connect_replicator_erp_user.
+
+Default:  "{{ kafka_connect_replicator_erp_oauth_user }}"
+
+***
+
+### kafka_connect_replicator_producer_erp_oauth_password
+
+Set this variable to the Client Secret of the OAuth Client for the Embedded Rest Proxy, to configure RBAC.  Defaults to match kafka_connect_replicator_erp_admin_password.
+
+Default:  "{{ kafka_connect_replicator_erp_oauth_password }}"
 
 ***
 
@@ -4406,7 +4886,7 @@ Default:  "{{ kafka_connect_replicator_erp_host }}"
 
 ### kafka_connect_replicator_monitoring_interceptor_erp_admin_user
 
-Set this variable to the user name of the admin user for the Embedded Rest Proxy, to configure RBAC.  Defaults to kafka_connect_replicator_erp_user.
+Set this variable to the user name of the Ldap admin user for the Embedded Rest Proxy, to configure RBAC.  Defaults to kafka_connect_replicator_erp_user.
 
 Default:  "{{ kafka_connect_replicator_erp_admin_user }}"
 
@@ -4414,9 +4894,25 @@ Default:  "{{ kafka_connect_replicator_erp_admin_user }}"
 
 ### kafka_connect_replicator_monitoring_interceptor_erp_admin_password
 
-Set this variable to the password for the Embedded Rest Proxy user, to configure RBAC.  Defaults to match kafka_connect_replicator_erp_admin_password.
+Set this variable to the password  of the Ldap admin user for the Embedded Rest Proxy, to configure RBAC.  Defaults to match kafka_connect_replicator_erp_admin_password.
 
 Default:  "{{ kafka_connect_replicator_erp_admin_password }}"
+
+***
+
+### kafka_connect_replicator_monitoring_interceptor_erp_oauth_user
+
+Set this variable to the Client Id of the OAuth Client for the Embedded Rest Proxy, to configure RBAC.  Defaults to kafka_connect_replicator_erp_user.
+
+Default:  "{{ kafka_connect_replicator_erp_oauth_user }}"
+
+***
+
+### kafka_connect_replicator_monitoring_interceptor_erp_oauth_password
+
+Set this variable to the Client Secret of the OAuth Client for the Embedded Rest Proxy, to configure RBAC.  Defaults to match kafka_connect_replicator_erp_admin_password.
+
+Default:  "{{ kafka_connect_replicator_erp_oauth_password }}"
 
 ***
 
@@ -4738,6 +5234,14 @@ Default:  openjdk-17-jdk
 
 ***
 
+### amazon_java_package_name
+
+Java Package to install on Amazon hosts. Possible values java-11-amazon-corretto or java-17-amazon-corretto
+
+Default:  java-17-amazon-corretto
+
+***
+
 ### ubuntu_java_package_name
 
 Java Package to install on Ubuntu hosts. Possible values openjdk-8-jdk, openjdk-11-jdk or openjdk-17-jdk
@@ -5023,6 +5527,108 @@ Default:  60
 ***
 
 ### kafka_broker_jmxexporter_bean_name_expressions_cache
+
+Whether to cache bean name expressions to rule computation (match and mismatch). Not recommended for rules matching on bean value, as only the value from the first scrape will be cached and re-used. This can increase performance when collecting a lot of mbeans.
+
+Default:  false
+
+***
+
+# kafka_controller
+
+Below are the supported variables for the role kafka_controller
+
+***
+
+### kafka_controller_custom_log4j
+
+Boolean to reconfigure Kafka's logging with RollingFileAppender and log cleanup
+
+Default:  "{{ custom_log4j }}"
+
+***
+
+### kafka_controller_log4j_root_logger
+
+Root logger within Kafka's log4j config. Only honored if kafka_controller_custom_log4j: true
+
+Default:  "INFO, stdout, kafkaAppender"
+
+***
+
+### kafka_controller_max_log_files
+
+Max number of log files generated by Kafka Controller. Only honored if kafka_controller_custom_log4j: true
+
+Default:  10
+
+***
+
+### kafka_controller_log_file_size
+
+Max size of a log file generated by Kafka Controller. Only honored if kafka_controller_custom_log4j: true
+
+Default:  100MB
+
+***
+
+### kafka_controller_logredactor_logger_specs_list
+
+List of loggers to redact. This is specified alongside the user defined redactor name and appenderRefs to be used in redactor definition. The redactor name should be unique for each logger.
+
+Default: 
+
+***
+
+### kafka_controller_custom_java_args
+
+Custom Java Args to add to the Kafka Process
+
+Default:  ""
+
+***
+
+### kafka_controller_service_overrides
+
+Overrides to the Service Section of Kafka Systemd File. This variable is a dictionary.
+
+Default: 
+
+***
+
+### kafka_controller_service_environment_overrides
+
+Environment Variables to be added to the Kafka Service. This variable is a dictionary.
+
+Default: 
+
+***
+
+### kafka_controller_service_unit_overrides
+
+Overrides to the Unit Section of Kafka Systemd File. This variable is a dictionary.
+
+Default: 
+
+***
+
+### kafka_controller_health_check_delay
+
+Time in seconds to wait before starting Kafka Health Checks.
+
+Default:  20
+
+***
+
+### kafka_controller_jmxexporter_startup_delay
+
+Time in seconds to wait before JMX exporter starts serving metrics. Any requests within the delay period will result in an empty metrics set.
+
+Default:  60
+
+***
+
+### kafka_controller_jmxexporter_bean_name_expressions_cache
 
 Whether to cache bean name expressions to rule computation (match and mismatch). Not recommended for rules matching on bean value, as only the value from the first scrape will be cached and re-used. This can increase performance when collecting a lot of mbeans.
 

@@ -9,7 +9,16 @@
           - rsync
           - java-11-openjdk
         state: present
-      when: ansible_os_family == "RedHat"
+      when: ansible_os_family == "RedHat" and ansible_distribution != "Amazon"
+
+    - name: Install OpenSSL Rsync and Java
+      yum:
+        name:
+          - openssl
+          - rsync
+          - java-17-amazon-corretto
+        state: present
+      when: ansible_os_family == "RedHat" and ansible_distribution == "Amazon"
 
     - name: Install OpenSSL Rsync and Java
       apt:
@@ -51,3 +60,7 @@
       file:
         path: /var/ssl/private/generation
         state: absent
+
+- name: Install Zookeeper Cluster
+  import_playbook: confluent.platform.all
+  when: lookup('env', 'MIGRATION')|default('false') == 'true'

@@ -230,7 +230,7 @@
         curl -k -X PUT https://localhost:8083/connectors/conn1/config \
           -H "Content-Type: application/json" -u mds:password \
           --cacert /var/ssl/private/ca.crt --key /var/ssl/private/kafka_connect.key --cert /var/ssl/private/kafka_connect.crt \
-          -d '{"connector.class": "org.apache.kafka.connect.tools.VerifiableSinkConnector",
+          -d '{"connector.class": "FileStreamSinkConnector",
           "tasks.max": "1",
           "topics": "${secret:conn1:topic}",
           "file": "/tmp/file-sink-test.txt",
@@ -369,28 +369,28 @@
     - name: Assert Broker Cluster ID as expected
       assert:
         that:
-          - broker_name == "{{cluster_name_query_json[0]['clusterName']}}"
+          - broker_name == cluster_name_query_json[0].clusterName
         fail_msg: "Broker ID set to {{cluster_name_query_json[0]['clusterName']}} not {{broker_name}}"
         quiet: true
 
     - name: Assert Kafka Connect Cluster ID as expected
       assert:
         that:
-          - connect_name == "{{cluster_name_query_json[1]['clusterName']}}"
+          - connect_name == cluster_name_query_json[1].clusterName
         fail_msg: "Connect Cluster ID set to {{cluster_name_query_json[1]['clusterName']}} not {{connect_name}}"
         quiet: true
 
     - name: Assert KSQL Cluster ID as expected
       assert:
         that:
-          - ksql_name == "{{cluster_name_query_json[2]['clusterName']}}"
+          - ksql_name == cluster_name_query_json[2].clusterName
         fail_msg: "KSQL Cluster ID set to {{cluster_name_query_json[2]['clusterName']}} not {{ksql_name}}"
         quiet: true
 
     - name: Assert Schema Registry Cluster ID as expected
       assert:
         that:
-          - schema_registry_name == "{{cluster_name_query_json[3]['clusterName']}}"
+          - schema_registry_name == cluster_name_query_json[3].clusterName
         fail_msg: "Schema Registry Cluster ID set to {{cluster_name_query_json[3]['clusterName']}} not {{schema_registry_name}}"
         quiet: true
 

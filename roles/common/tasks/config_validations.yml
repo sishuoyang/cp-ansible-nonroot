@@ -158,3 +158,51 @@
     - fips_enabled | bool
     - ansible_os_family == "RedHat"
   tags: validate
+
+- assert:
+    that:
+      - auth_mode in ['ldap', 'ldap_with_oauth', 'oauth', 'none']
+    fail_msg: "auth_mode must be one of 'ldap', 'ldap_with_oauth', 'oauth', 'none'"
+  tags: validate
+
+- assert:
+    that:
+      - auth_mode in ['ldap', 'ldap_with_oauth', 'oauth']
+    fail_msg: "When RBAC is enabled, auth_mode must be one of 'ldap', 'ldap_with_oauth', 'oauth'"
+  when:
+    - rbac_enabled|bool
+  tags: validate
+
+- assert:
+    that:
+      - auth_mode in ['none', 'oauth']
+    fail_msg: "When RBAC is not enabled, auth_mode must be one of 'oauth', 'none'"
+  when:
+    - not rbac_enabled|bool
+  tags: validate
+
+- assert:
+    that:
+      - rbac_enabled|bool
+    fail_msg: "When auth mode is ldap, RBAC also must be enabled"
+  when:
+    - auth_mode == 'ldap' or auth_mode == 'ldap_with_oauth'
+  tags: validate
+
+- assert:
+    that:
+      - "{{item}} != 'none'"
+    fail_msg: "Please provide the value of {{ item }} in the inventory file."
+  loop:
+    - oauth_token_uri
+    - oauth_issuer_url
+    - oauth_jwks_uri
+  when: auth_mode == 'oauth' or auth_mode == 'ldap_with_oauth'
+  tags: validate
+
+- assert:
+    that:
+      - not fips_enabled|bool
+    fail_msg: "OAuth is not supported on FIPS enabled cluster yet. Please disable FIPS or OAuth to setup the cluster."
+  when: auth_mode == 'oauth' or auth_mode == 'ldap_with_oauth'
+  tags: validate

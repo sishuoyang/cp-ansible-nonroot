@@ -1,5 +1,11 @@
 import re
 
+DOCUMENTATION = '''
+---
+module: filter
+description: This plugin contains python functions which act as custom filters to generate configurations based on Ansible input.
+'''
+
 
 class FilterModule(object):
     def filters(self):
@@ -159,7 +165,8 @@ class FilterModule(object):
                             plain_jaas_config, keytab_path,
                             kerberos_principal, kerberos_primary,
                             scram_user, scram_password, scram256_user,
-                            scram256_password, oauth_pem_path):
+                            scram256_password, rbac_enabled_public_pem_path, oauth_enabled, oauth_jwks_uri, oauth_expected_audience,
+                            oauth_sub_claim, rbac_enabled, kraft_listener, idp_self_signed):
         # For kafka broker properties: Takes listeners dictionary and outputs all properties based on the listeners' settings
         # Other inputs help fill out the properties
         final_dict = {}
@@ -208,12 +215,56 @@ class FilterModule(object):
 
             if self.normalize_sasl_protocol(listeners_dict[listener].get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER':
                 final_dict['listener.name.' + listener_name + '.sasl.enabled.mechanisms'] = 'OAUTHBEARER'
+                final_dict['listener.name.' + listener_name + '.principal.builder.class'] =\
+                    'io.confluent.kafka.security.authenticator.OAuthKafkaPrincipalBuilder'
+
+            if self.normalize_sasl_protocol(listeners_dict[listener].get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' and not oauth_enabled:
+                final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.jaas.config'] =\
+                    'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required publicKeyPath=\"' + rbac_enabled_public_pem_path + '\";'
                 final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.server.callback.handler.class'] =\
                     'io.confluent.kafka.server.plugins.auth.token.TokenBearerValidatorCallbackHandler'
                 final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.login.callback.handler.class'] =\
                     'io.confluent.kafka.server.plugins.auth.token.TokenBearerServerLoginCallbackHandler'
-                final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.jaas.config'] =\
-                    'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required publicKeyPath=\"' + oauth_pem_path + '\";'
+
+            if self.normalize_sasl_protocol(listeners_dict[listener].get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' and \
+                    oauth_enabled and rbac_enabled:
+                final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.server.callback.handler.class'] =\
+                    'io.confluent.kafka.server.plugins.auth.token.CompositeBearerValidatorCallbackHandler'
+                final_dict['listener.name.' + listener_name + '.sasl.oauthbearer.jwks.endpoint.url'] = oauth_jwks_uri
+                final_dict['listener.name.' + listener_name + '.sasl.oauthbearer.sub.claim.name'] = oauth_sub_claim
+
+            if self.normalize_sasl_protocol(listeners_dict[listener].get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' \
+                    and oauth_enabled and not rbac_enabled:
+                final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.server.callback.handler.class'] =\
+                    'org.apache.kafka.common.security.oauthbearer.secured.OAuthBearerValidatorCallbackHandler'
+                final_dict['listener.name.' + listener_name + '.sasl.oauthbearer.jwks.endpoint.url'] = oauth_jwks_uri
+                final_dict['listener.name.' + listener_name + '.sasl.oauthbearer.sub.claim.name'] = oauth_sub_claim
+
+            if self.normalize_sasl_protocol(listeners_dict[listener].get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' and \
+                    oauth_enabled:
+                if rbac_enabled and idp_self_signed:
+                    final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.jaas.config'] =\
+                        'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required publicKeyPath=\"' + \
+                        rbac_enabled_public_pem_path + '\" ssl.truststore.location=\"' + kafka_broker_truststore_path + \
+                        '\" ssl.truststore.password=\"' + kafka_broker_truststore_storepass + '\" unsecuredLoginStringClaim_sub="thePrincipalName";'
+                if (rbac_enabled and (not idp_self_signed)):
+                    final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.jaas.config'] =\
+                        'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required publicKeyPath=\"' + \
+                        rbac_enabled_public_pem_path + '\" unsecuredLoginStringClaim_sub="thePrincipalName";'
+                if ((not rbac_enabled) and idp_self_signed):
+                    final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.jaas.config'] =\
+                        'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required' + \
+                        ' ssl.truststore.location=\"' + kafka_broker_truststore_path + \
+                        '\" ssl.truststore.password=\"' + kafka_broker_truststore_storepass + '\" unsecuredLoginStringClaim_sub="thePrincipalName";'
+                if ((not rbac_enabled) and (not idp_self_signed)):
+                    final_dict['listener.name.' + listener_name + '.oauthbearer.sasl.jaas.config'] =\
+                        'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required unsecuredLoginStringClaim_sub="thePrincipalName";'
+
+            if self.normalize_sasl_protocol(listeners_dict[listener].get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' and \
+                    oauth_enabled and oauth_expected_audience != 'none':
+                final_dict['listener.name.' + listener_name + '.sasl.oauthbearer.expected.audience'] = oauth_expected_audience
+
+            if kraft_listener and (rbac_enabled or oauth_enabled):
                 final_dict['listener.name.' + listener_name + '.principal.builder.class'] =\
                     'io.confluent.kafka.security.authenticator.OAuthKafkaPrincipalBuilder'
 
@@ -223,7 +274,8 @@ class FilterModule(object):
                           config_prefix, truststore_path, truststore_storepass, public_certificates_enabled, keystore_path, keystore_storepass,
                           keystore_keypass, omit_jaas_configs, sasl_plain_username, sasl_plain_password, sasl_scram_username, sasl_scram_password,
                           sasl_scram256_username, sasl_scram256_password, kerberos_kafka_broker_primary, keytab_path, kerberos_principal,
-                          omit_oauth_configs, oauth_username, oauth_password, mds_bootstrap_server_urls):
+                          omit_oauth_configs, oauth_username, oauth_password, mds_bootstrap_server_urls, oauth_enabled, oauth_superuser_client_id,
+                          oauth_superuser_client_password, oauth_groups_scope, oauth_token_uri, idp_self_signed):
         # For any kafka client's properties: Takes in a single kafka listener and output properties to connect to that listener
         # Other inputs help fill out the properties
         final_dict = {
@@ -271,18 +323,45 @@ class FilterModule(object):
                 keytab_path + '\" principal=\"' + kerberos_principal + '\";'
 
         if not omit_oauth_configs:
-            if self.normalize_sasl_protocol(listener_dict.get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER':
+            if self.normalize_sasl_protocol(listener_dict.get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' and not oauth_enabled:
                 final_dict[config_prefix + 'sasl.mechanism'] = 'OAUTHBEARER'
                 final_dict[config_prefix + 'sasl.login.callback.handler.class'] = 'io.confluent.kafka.clients.plugins.auth.token.TokenUserLoginCallbackHandler'
-
-            if self.normalize_sasl_protocol(listener_dict.get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' and not omit_jaas_configs:
                 final_dict[config_prefix + 'sasl.jaas.config'] = 'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required username=\"' +\
                     oauth_username + '\" password=\"' + str(oauth_password) + '\" metadataServerUrls=\"' + mds_bootstrap_server_urls + '\";'
+
+            if self.normalize_sasl_protocol(listener_dict.get('sasl_protocol', default_sasl_protocol)) == 'OAUTHBEARER' and oauth_enabled:
+                final_dict[config_prefix + 'sasl.mechanism'] = 'OAUTHBEARER'
+                final_dict[config_prefix + 'sasl.login.callback.handler.class'] =\
+                    'org.apache.kafka.common.security.oauthbearer.secured.OAuthBearerLoginCallbackHandler'
+                final_dict[config_prefix + 'sasl.login.connect.timeout'] = '15000'
+                final_dict[config_prefix + 'sasl.oauthbearer.token.endpoint.url'] = oauth_token_uri
+
+                if (oauth_groups_scope == 'none' and (not idp_self_signed)):
+                    final_dict[config_prefix + 'sasl.jaas.config'] = 'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required ' + \
+                        'clientId=\"' + oauth_superuser_client_id + '\" clientSecret=\"' + str(oauth_superuser_client_password) + '\";'
+
+                if (oauth_groups_scope != 'none' and (not idp_self_signed)):
+                    final_dict[config_prefix + 'sasl.jaas.config'] = 'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required ' + \
+                        'clientId=\"' + oauth_superuser_client_id + '\" clientSecret=\"' + str(oauth_superuser_client_password) + \
+                        '\" scope=\"' + oauth_groups_scope + '\";'
+
+                if oauth_groups_scope == 'none' and idp_self_signed:
+                    final_dict[config_prefix + 'sasl.jaas.config'] = 'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required ' + \
+                        'clientId=\"' + oauth_superuser_client_id + '\" clientSecret=\"' + str(oauth_superuser_client_password) + \
+                        '\" ssl.truststore.location=\"' + \
+                        truststore_path + '\" ssl.truststore.password=\"' + truststore_storepass + '\";'
+
+                if oauth_groups_scope != 'none' and idp_self_signed:
+                    final_dict[config_prefix + 'sasl.jaas.config'] = 'org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required ' + \
+                        'clientId=\"' + oauth_superuser_client_id + '\" clientSecret=\"' + str(oauth_superuser_client_password) + \
+                        '\" scope=\"' + oauth_groups_scope + \
+                        '\" ssl.truststore.location=\"' + truststore_path + '\" ssl.truststore.password=\"' + truststore_storepass + '\";'
 
         return final_dict
 
     def c3_connect_properties(self, connect_group_list, groups, hostvars, ssl_enabled, http_protocol, port, default_connect_group_id,
-                              truststore_path, truststore_storepass, keystore_path, keystore_storepass, keystore_keypass):
+                              truststore_path, truststore_storepass, keystore_path, keystore_storepass, keystore_keypass,
+                              oauth_enabled, rbac_enabled, oauth_user, oauth_password, oauth_groups_scope, idp_self_signed):
         # For c3's connect properties, inputs a list of ansible groups of connect hosts, as well as their ssl settings
         # Outputs a properties dictionary with properties necessary to connect to each connect group
         # Other inputs help fill out the properties
@@ -309,6 +388,17 @@ class FilterModule(object):
                     final_dict['confluent.controlcenter.connect.' + group_id + '.ssl.keystore.location'] = keystore_path
                     final_dict['confluent.controlcenter.connect.' + group_id + '.ssl.keystore.password'] = keystore_storepass
                     final_dict['confluent.controlcenter.connect.' + group_id + '.ssl.key.password'] = keystore_keypass
+
+                if delegate_host.get('kafka_connect_oauth_enabled', oauth_enabled) and not rbac_enabled:
+                    final_dict['confluent.controlcenter.connect.' + group_id + '.oauthbearer.login.client.id'] = oauth_user
+                    final_dict['confluent.controlcenter.connect.' + group_id + '.oauthbearer.login.client.secret'] = oauth_password
+
+                if delegate_host.get('kafka_connect_oauth_enabled', oauth_enabled) and not rbac_enabled and oauth_groups_scope != 'none':
+                    final_dict['confluent.controlcenter.connect.' + group_id + '.oauthbearer.login.oauth.scope'] = oauth_groups_scope
+
+                if delegate_host.get('kafka_connect_oauth_enabled', oauth_enabled) and not rbac_enabled and idp_self_signed:
+                    final_dict['confluent.controlcenter.connect.' + group_id + '.ssl.truststore.location'] = truststore_path
+                    final_dict['confluent.controlcenter.connect.' + group_id + '.ssl.truststore.password'] = truststore_storepass
 
         return final_dict
 

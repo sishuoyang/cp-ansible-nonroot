@@ -41,7 +41,9 @@
   vars:
     service_name: "{{ kafka_controller_service_name }}"
   when: installation_method == "package"
-  tags: package
+  tags:
+    - package
+    - cp_package
 
 - name: Install the Kafka Controller Packages
   yum:
@@ -56,7 +58,9 @@
     - ansible_os_family == "RedHat"
     - installation_method == "package"
   ignore_errors: "{{ ansible_check_mode }}"
-  tags: package
+  tags:
+    - package
+    - cp_package
   notify: restart Kafka Controller
 
 - name: Install the Kafka Controller Packages
@@ -71,7 +75,9 @@
     - ansible_os_family == "Debian"
     - installation_method == "package"
   ignore_errors: "{{ ansible_check_mode }}"
-  tags: package
+  tags:
+    - package
+    - cp_package
   notify: restart Kafka Controller
 
 - name: Kafka Controller group
@@ -137,6 +143,22 @@
 - include_tasks: rbac.yml
   when: rbac_enabled|bool
 
+- name: Import IDP certificate to Truststore for OAuth
+  include_role:
+    name: common
+    tasks_from: idp_certs.yml
+  vars:
+    idp_cert_path: "{{ oauth_idp_cert_path }}"
+    idp_cert_dest: /tmp/oauth_idp_cert.pem
+    alias: "oauth_cert"
+    truststore_storepass: "{{kafka_controller_truststore_storepass}}"
+    truststore_path: "{{kafka_controller_pkcs12_truststore_path}}"
+    bcfks_truststore_path: "{{kafka_controller_bcfks_truststore_path}}"
+    create_bouncy_castle_keystore: "{{fips_enabled}}"
+  when:
+    - oauth_enabled|bool or schema_registry_oauth_enabled|bool or kafka_rest_oauth_enabled|bool or kafka_connect_oauth_enabled|bool or kafka_connect_replicator_oauth_enabled|bool
+    - oauth_idp_cert_path != ""
+
 - name: Configure Kerberos
   include_role:
     name: kerberos
@@ -147,7 +169,7 @@
     kerberos_keytab_destination_path: "{{kafka_controller_keytab_path}}"
     kerberos_handler: "restart Kafka Controller"
   when:
-    - "'GSSAPI' in kafka_controller_sasl_enabled_mechanisms or mds_broker_listener.sasl_protocol =='kerberos'"
+    - "'GSSAPI' in kafka_controller_sasl_enabled_mechanisms or mds_broker_listener.sasl_protocol =='kerberos' or ( kraft_migration|bool and zookeeper_client_authentication_type == 'kerberos' )"
 
 - name: Copy Custom Kafka Files
   include_role:
@@ -183,7 +205,7 @@
     - filesystem
     - privileged
 
-- name: Set Permissions on Data Dir files  # noqa deprecated-command-syntax
+- name: Set Permissions on Data Dir files  # noqa no-free-form
   # Have to use command + chown instead of the Ansible file module here as it seems
   # like the file module can't handle files modified/deleted while running. This task
   # can fail on a very active cluster. See https://github.com/confluentinc/cp-ansible/pull/903 for details.
@@ -332,8 +354,8 @@
     mode: '640'
     owner: "{{kafka_controller_user}}"
     group: "{{kafka_controller_group}}"
-  when:
-    - "'GSSAPI' in kafka_controller_sasl_enabled_mechanisms"
+  when: "'GSSAPI' in kafka_controller_sasl_enabled_mechanisms or
+          ( kraft_migration|bool and zookeeper_client_authentication_type in ['kerberos', 'digest'])"
   notify: restart Kafka Controller
   tags:
     - configuration
@@ -425,7 +447,6 @@
 - name: Wait for Controller health checks to complete
   include_tasks: health_check.yml
   when:
-    - confluent_server_enabled|bool # metadata-quorum doesn't work on community kafka
     - kafka_controller_health_checks_enabled|bool
     - not ansible_check_mode
   tags: health_check

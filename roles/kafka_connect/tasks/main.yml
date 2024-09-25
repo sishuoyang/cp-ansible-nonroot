@@ -155,9 +155,34 @@
   tags:
     - configuration
 
-- name: Configure RBAC
+- name: Configure RBAC for OAuth User
   include_tasks: rbac.yml
-  when: rbac_enabled|bool
+  vars:
+    connect_user: "{{kafka_connect_oauth_principal}}"
+  when: rbac_enabled|bool and oauth_enabled|bool
+
+- name: Configure RBAC for Ldap User
+  include_tasks: rbac.yml
+  vars:
+    connect_user: "{{kafka_connect_ldap_user}}"
+  when:
+    - rbac_enabled|bool
+    - ((not oauth_enabled) or ( oauth_enabled and ldap_with_oauth_enabled ))
+
+- name: Import IDP certificate to Truststore for OAuth
+  include_role:
+    name: common
+    tasks_from: idp_certs.yml
+  vars:
+    idp_cert_path: "{{ oauth_idp_cert_path }}"
+    idp_cert_dest: /tmp/oauth_idp_cert.pem
+    alias: "oauth_cert"
+    truststore_storepass: "{{kafka_connect_truststore_storepass}}"
+    truststore_path: "{{kafka_connect_truststore_path}}"
+    create_bouncy_castle_keystore: false
+  when:
+    - oauth_enabled|bool or schema_registry_oauth_enabled|bool or kafka_rest_oauth_enabled|bool or kafka_connect_oauth_enabled|bool or kafka_connect_replicator_oauth_enabled|bool
+    - oauth_idp_cert_path != ""
 
 - name: Create Kafka Connect Config directory
   file:
@@ -377,6 +402,25 @@
       - kafka_connect
       - kafka_connect_parallel
       - kafka_connect_serial
+      - kafka_broker
+      - kafka_broker_parallel
+      - kafka_broker_serial
+      - zookeeper
+      - zookeeper_parallel
+      - zookeeper_serial
+      - kafka_rest
+      - kafka_rest_parallel
+      - kafka_rest_serial
+      - control_center
+      - control_center_parallel
+      - control_center_serial
+      - ksql
+      - ksql_parallel
+      - ksql_serial
+      - schema_registry
+      - kafka_controller
+      - kafka_controller_parallel
+      - kafka_controller_serial
   set_fact:
     parent_kafka_connect_cluster_group: "{{ (group_names | difference(keywords))[0] | default('kafka_connect') }}"
     parent_kafka_connect_cluster_id: "{{ kafka_connect_final_properties['group.id'] }}"

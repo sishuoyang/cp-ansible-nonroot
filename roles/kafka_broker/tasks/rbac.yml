@@ -12,6 +12,13 @@
       delegate_facts: true
   run_once: true
 
+- name: Fail if No Authentication is set
+  fail:
+    msg: "Please configure Authentication on the Kafka cluster."
+  loop: "{{ groups['kafka_broker'] }}"
+  when: hostvars[item]['kafka_broker_principal'] is undefined
+  run_once: true
+
 - name: Show principals
   debug:
     msg: "Principal for {{item}} is  {{ hostvars[item]['kafka_broker_principal'] }}"
@@ -19,9 +26,20 @@
   run_once: true
 
 # Take super.users property, split into list, remove empty string from list, and add in mds_super_user
-- name: Initialize Super Users List
+- name: Initialize Super Users List with LDAP
   set_fact:
     super_users: "{{ (kafka_broker_final_properties['super.users'] | default('')).split(';') | difference(['']) + [ 'User:' + lookup('vars', 'mds_super_user') ]}}"
+  when: not oauth_enabled
+
+- name: Initialize Super Users List with OAuth
+  set_fact:
+    super_users: "{{ (kafka_broker_final_properties['super.users'] | default('')).split(';') | difference(['']) + [ 'User:' + lookup('vars', 'oauth_superuser_principal') ]}}"
+  when: oauth_enabled and not ldap_with_oauth_enabled
+
+- name: Initialize Super Users List with both OAuth and LDAP
+  set_fact:
+    super_users: "{{ (kafka_broker_final_properties['super.users'] | default('')).split(';') | difference(['']) + [ 'User:' + lookup('vars', 'oauth_superuser_principal') ] + [ 'User:' + lookup('vars', 'mds_super_user') ] }}"
+  when: oauth_enabled and ldap_with_oauth_enabled
 
 # Loop over each brokers principal and add to list
 - name: Add Each Broker's Principal to Super Users List
@@ -47,6 +65,13 @@
       }
     ) }}"
 
+# store the original Controller properties when Controller and Broker colocated
+- set_fact:
+    kafka_controller_initial_properties: "{{hostvars[inventory_hostname]['kafka_controller_final_properties']}}"
+  when:
+    - kraft_enabled|bool
+    - "inventory_hostname in groups.kafka_controller"
+
 #this is required when we have mTLS enabled
 - name: Add Broker's Principal to Controller's Super Users List
   include_tasks: set_controller_principal.yml
@@ -58,6 +83,13 @@
       delegate_to: "{{item}}"
   when: kraft_enabled|bool and kafka_controller_ssl_mutual_auth_enabled|bool
   run_once: true
+
+# reset the Controller's properties to the original properties when Controller and Broker colocated
+- set_fact:
+    kafka_controller_final_properties: "{{kafka_controller_initial_properties}}"
+  when:
+    - kraft_enabled|bool
+    - "inventory_hostname in groups.kafka_controller"
 
 - name: Create SSL Certificate Directory
   file:
