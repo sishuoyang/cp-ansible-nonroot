@@ -1,4 +1,6 @@
 #! /bin/bash
+{% if additional_env_file_path is defined %}
+source {{ additional_env_file_path }}
 {% for key, value in zookeeper_service_environment_overrides.items() %}
 {% if value %}
 {{key}}="{{value}}" \

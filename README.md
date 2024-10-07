@@ -45,6 +45,11 @@ ansible-playbook -i hosts_example_nonroot.yml confluent.platform.create_service_
 
 The above will create start scripts that can be used to start the components.
 
+If you need to load addtional environement from another script file, define the below variable in the inventory file.
+```yml
+additional_env_file_path: /data1/confluent/jdk.sh
+```
+
 To start components:
 
 ```

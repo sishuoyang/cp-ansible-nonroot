@@ -6,6 +6,8 @@ all:
     ansible_become: true
     ansible_ssh_private_key_file: /tmp/certs/ssh_priv.pem
 
+    # addtional environement to source in the generated script file
+    additional_env_file_path: /data1/confluent/jdk.sh
     # (Non-root) Configure based on environment
     deployment_user: cp-user
     deployment_group: cp-user
