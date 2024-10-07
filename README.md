@@ -4,7 +4,7 @@
 
 This fork provides some preliminaries for non-root, no sudo deployments. 
 
-From `7.5.2-post`, this repo is based on: https://github.com/tpham305/nonroot-cp-ansible-7.5.2
+this repo is based on: https://github.com/tpham305/nonroot-cp-ansible-7.5.2 and merged with `7.7.1-post`
 
 Added:
 
