@@ -1,5 +1,7 @@
 #!/bin/bash
-
+{% if additional_env_file_path is defined %}
+source {{ additional_env_file_path }}
+{% endif %}
 IDENTIFIER=org.apache.kafka.connect.cli.ConnectDistributed
 NAME="connect"
 

@@ -1,4 +1,7 @@
 #! /bin/bash
+{% if additional_env_file_path is defined %}
+source {{ additional_env_file_path }}
+{% endif %}
 {% for key, value in kafka_broker_service_environment_overrides.items() %}
 {% if value %}
 {{key}}="{{value}}" \

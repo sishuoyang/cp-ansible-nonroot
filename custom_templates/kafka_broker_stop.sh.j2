@@ -1,3 +1,5 @@
 #! /bin/bash
-
+{% if additional_env_file_path is defined %}
+source {{ additional_env_file_path }}
+{% endif %}
 {{ binary_base_path }}/bin/kafka-server-stop
