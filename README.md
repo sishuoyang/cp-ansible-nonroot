@@ -10,6 +10,9 @@ Added:
 
 * Scripts for Zookeeper deployments
 
+Changed:
+* Removed `privileged` tag for `Copy in Keytab File` and `Create Keytabs Directory` kerberos tasks
+
 ### What works and what does not
 What works out of the box:
 
