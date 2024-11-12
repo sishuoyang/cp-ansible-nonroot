@@ -71,15 +71,15 @@ all:
     ksql_kerberos_keytab_path_dest: "{{ deployment_path }}/kerberos/keytabs/ksql.keytab"
     control_center_kerberos_keytab_path_dest: "{{ deployment_path }}/kerberos/keytabs/control_center.keytab"
 
-    # (Non-root) Skip Restarts
-    zookeeper_skip_restarts: true
-    kafka_broker_skip_restarts: true
-    kafka_controller_skip_restarts: true
-    schema_registry_skip_restarts: true
-    kafka_rest_skip_restarts: true
-    kafka_connect_skip_restarts: true
-    ksql_skip_restarts: true
-    control_center_skip_restarts: true
+    # NO NEED TO SKIP RESART. Playbook runs the start/stop script.
+    # zookeeper_skip_restarts: true
+    # kafka_broker_skip_restarts: true
+    # kafka_controller_skip_restarts: true
+    # schema_registry_skip_restarts: true
+    # kafka_rest_skip_restarts: true
+    # kafka_connect_skip_restarts: true
+    # ksql_skip_restarts: true
+    # control_center_skip_restarts: true
 
     # Increase MDS retries to allow time for manual service start
     mds_retries: 120

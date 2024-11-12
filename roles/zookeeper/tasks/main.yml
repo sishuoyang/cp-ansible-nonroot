@@ -198,6 +198,32 @@
   tags:
     - filesystem
 
+- name: Create Start Script Directory - Zookeeper
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+    mode: 0750
+    state: directory
+
+- name: Write Start Script - Zookeeper
+  template:
+    src: ../custom_templates/zookeeper_start.sh.j2
+    dest: "{{ start_script_path }}/zookeeper_start.sh"
+    mode: 0744
+    owner: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+
+- name: Write Stop Script - Zookeeper
+  template:
+    src: ../custom_templates/zookeeper_stop.sh.j2
+    dest: "{{ start_script_path }}/zookeeper_stop.sh"
+    mode: 0744
+    owner: "{{ zookeeper_user }}"
+    group: "{{ zookeeper_group }}"
+
+
 - name: Create Zookeeper Config
   template:
     src: zookeeper.properties.j2

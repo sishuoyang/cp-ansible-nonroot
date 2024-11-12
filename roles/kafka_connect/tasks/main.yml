@@ -296,6 +296,34 @@
   tags:
     - log
 
+- name: Create Start Script Directory - Kafka Connect
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ kafka_connect_user }}"
+    group: "{{ kafka_connect_group }}"
+    mode: 0750
+    state: directory
+  tags:
+    - filesystem
+
+- name: Write Start Script - Kafka Connect
+  template:
+    src: ../custom_templates/kafka_connect_start.sh.j2
+    dest: "{{ start_script_path }}/kafka_connect_start.sh"
+    mode: 0744
+    owner: "{{ kafka_connect_user }}"
+    group: "{{ kafka_connect_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+
+- name: Write Stop Script - Kafka Connect
+  template:
+    src: ../custom_templates/kafka_connect_stop.sh.j2
+    dest: "{{ start_script_path }}/kafka_connect_stop.sh"
+    mode: 0744
+    owner: "{{ kafka_connect_user }}"
+    group: "{{ kafka_connect_group }}"
+
+
 - name: Restart kafka connect
   ansible.builtin.debug:
     msg: "restarting kafka connect"

@@ -210,6 +210,35 @@
   tags:
     - configuration
 
+
+- name: Create Start Script Directory - Kafka Rest
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ kafka_rest_user }}"
+    group: "{{ kafka_rest_group }}"
+    mode: 0750
+    state: directory
+  tags:
+    - filesystem
+
+- name: Write Start Script - Kafka Rest
+  template:
+    src: ../custom_templates/kafka_rest_start.sh.j2
+    dest: "{{ start_script_path }}/kafka_rest_start.sh"
+    mode: 0744
+    owner: "{{ kafka_rest_user }}"
+    group: "{{ kafka_rest_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+
+- name: Write Stop Script - Kafka Rest
+  template:
+    src: ../custom_templates/kafka_rest_stop.sh.j2
+    dest: "{{ start_script_path }}/kafka_rest_stop.sh"
+    mode: 0744
+    owner: "{{ kafka_rest_user }}"
+    group: "{{ kafka_rest_group }}"
+
+
 - name: Create Kafka Rest Config directory
   file:
     path: "{{ kafka_rest.config_file | dirname }}"

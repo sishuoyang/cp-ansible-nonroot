@@ -203,6 +203,33 @@
     - configuration
     - filesystem
 
+- name: Create Start Script Directory - Control Center
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ control_center_user }}"
+    group: "{{ control_center_group }}"
+    mode: 0750
+    state: directory
+  tags:
+    - filesystem
+
+- name: Write Start Script - Control Center
+  template:
+    src: ../custom_templates/control_center_start.sh.j2
+    dest: "{{ start_script_path }}/control_center_start.sh"
+    mode: 0744
+    owner: "{{ control_center_user }}"
+    group: "{{ control_center_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+
+- name: Write Stop Script - Control Center
+  template:
+    src: ../custom_templates/control_center_stop.sh.j2
+    dest: "{{ start_script_path }}/control_center_stop.sh"
+    mode: 0744
+    owner: "{{ control_center_user }}"
+    group: "{{ control_center_group }}"
+
 - name: Create Control Center Config
   template:
     src: control-center.properties.j2

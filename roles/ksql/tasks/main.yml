@@ -190,6 +190,33 @@
     - oauth_enabled|bool or schema_registry_oauth_enabled|bool or kafka_rest_oauth_enabled|bool or kafka_connect_oauth_enabled|bool or kafka_connect_replicator_oauth_enabled|bool
     - oauth_idp_cert_path != ""
 
+- name: Create Start Script Directory - ksql
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ ksql_user }}"
+    group: "{{ ksql_group }}"
+    mode: 0750
+    state: directory
+  tags:
+    - filesystem
+
+- name: Write Start Script - ksql
+  template:
+    src: ../custom_templates/ksql_start.sh.j2
+    dest: "{{ start_script_path }}/ksql_start.sh"
+    mode: 0744
+    owner: "{{ ksql_user }}"
+    group: "{{ ksql_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+
+- name: Write Stop Script - ksql
+  template:
+    src: ../custom_templates/ksql_stop.sh.j2
+    dest: "{{ start_script_path }}/ksql_stop.sh"
+    mode: 0744
+    owner: "{{ ksql_user }}"
+    group: "{{ ksql_group }}"
+
 - name: Create Ksql Config directory
   file:
     path: "{{ ksql.config_file | dirname }}"

@@ -6,13 +6,11 @@ This fork provides some preliminaries for non-root, no sudo deployments.
 
 this repo is based on: https://github.com/tpham305/nonroot-cp-ansible-7.5.2 and merged with `7.7.1-post`
 
-Added:
-
-* Scripts for Zookeeper deployments
-
-Changed:
+Modifications:
 * Removed `privileged` tag for `Copy in Keytab File` and `Create Keytabs Directory` kerberos tasks
 * Removed `arc-four-hmac rc4-hmac` from Kerberos algorithms
+* Startup/Stop script generation is moved to the respective role `main.yml`. There is **no need** to run a seperate playbook for script generation.
+* Service restart/stop is added to the respective role `restart_and_wait.yml`
 
 ### What works and what does not
 What works out of the box:

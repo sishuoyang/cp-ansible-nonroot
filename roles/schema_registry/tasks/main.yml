@@ -181,6 +181,33 @@
   tags:
     - filesystem
 
+- name: Create Start Script Directory - Schema Registry
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ schema_registry_user }}"
+    group: "{{ schema_registry_group }}"
+    mode: 0750
+    state: directory
+  tags:
+    - filesystem
+
+- name: Write Start Script - Schema Registry
+  template:
+    src: ../custom_templates/schema_registry_start.sh.j2
+    dest: "{{ start_script_path }}/schema_registry_start.sh"
+    mode: 0744
+    owner: "{{ schema_registry_user }}"
+    group: "{{ schema_registry_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+
+- name: Write Stop Script - Schema Registry
+  template:
+    src: ../custom_templates/schema_registry_stop.sh.j2
+    dest: "{{ start_script_path }}/schema_registry_stop.sh"
+    mode: 0744
+    owner: "{{ schema_registry_user }}"
+    group: "{{ schema_registry_group }}"
+
 - name: Create Schema Registry Config
   template:
     src: schema-registry.properties.j2

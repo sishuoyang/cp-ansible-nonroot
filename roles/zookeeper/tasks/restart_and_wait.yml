@@ -6,7 +6,21 @@
     state: restarted
   tags:
     - systemd
+  when: not nonroot_deployment   
 
+- name: Stop Zookeeper (Shell Script)
+  ansible.builtin.shell: "{{ start_script_path }}/zookeeper_stop.sh"
+  when: nonroot_deployment
+  ignore_errors: true
+
+- name: Wait for Zookeeper to Stop
+  wait_for:
+    timeout: 10
+  when: nonroot_deployment
+
+- name: Start Zookeeper (Shell Script)
+  ansible.builtin.shell: "{{ start_script_path }}/zookeeper_start.sh"
+  when: nonroot_deployment 
 - name: Startup Delay
   wait_for:
     timeout: "{{ zookeeper_health_check_delay }}"

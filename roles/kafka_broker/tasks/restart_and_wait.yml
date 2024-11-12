@@ -6,7 +6,23 @@
     state: restarted
   tags:
     - systemd
+  when: not nonroot_deployment   
+
+- name: Stop Kafka Broker (Shell Script)
+  ansible.builtin.shell: "{{ start_script_path }}/kafka_broker_stop.sh"
+  when: nonroot_deployment
+  ignore_errors: true
+
+- name: Wait for Kafka Broker to Stop
+  wait_for:
+    timeout: 10
+  when: nonroot_deployment
+
+- name: Start Kafka Broker (Shell Script)
+  ansible.builtin.shell: "{{ start_script_path }}/kafka_broker_start.sh"
+  when: nonroot_deployment 
 
 - name: Startup Delay
   wait_for:
     timeout: "{{ kafka_broker_health_check_delay }}"
+
