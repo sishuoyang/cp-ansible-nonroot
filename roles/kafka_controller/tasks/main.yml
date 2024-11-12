@@ -213,6 +213,7 @@
   changed_when: false
   tags:
     - filesystem
+    - privileged
 
 - name: Create Kafka Controller Config directory
   file:
@@ -265,6 +266,31 @@
     - filesystem
     - log
     #- privileged
+
+- name: Create Start Script Directory - Kafka Controller
+  file:
+    path: "{{start_script_path}}"
+    owner: "{{ kafka_controller_user }}"
+    group: "{{ kafka_controller_group }}"
+    mode: 0750
+    state: directory
+
+- name: Write Start Script - Kafka Controller
+  template:
+    src: ../custom_templates/kafka_controller_start.sh.j2
+    dest: "{{ start_script_path }}/kafka_controller_start.sh"
+    mode: 0744
+    owner: "{{ kafka_controller_user }}"
+    group: "{{ kafka_controller_group }}"
+  diff: "{{ not mask_sensitive_diff|bool }}"
+
+- name: Write Stop Script - Kafka Controller
+  template:
+    src: ../custom_templates/kafka_controller_stop.sh.j2
+    dest: "{{ start_script_path }}/kafka_controller_stop.sh"
+    mode: 0744
+    owner: "{{ kafka_controller_user }}"
+    group: "{{ kafka_controller_group }}"
 
 - name: Update Kafka log4j Config for Log Cleanup
   include_role:

@@ -7,6 +7,19 @@
   tags:
     - systemd
 
+- name: Stop Kafka Controller (Shell Script)
+  ansible.builtin.shell: "{{ start_script_path }}/kafka_controller_stop.sh"
+  when: nonroot_deployment
+
+- name: Wait for Kafka Controller to Stop
+  wait_for:
+    timeout: "10"
+  when: nonroot_deployment
+
+- name: Start Kafka Controller (Shell Script)
+  ansible.builtin.shell: "{{ start_script_path }}/kafka_controller_start.sh"
+  when: nonroot_deployment
+
 - name: Startup Delay
   wait_for:
     timeout: "{{ kafka_controller_health_check_delay }}"

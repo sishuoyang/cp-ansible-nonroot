@@ -12,6 +12,7 @@ Added:
 
 Changed:
 * Removed `privileged` tag for `Copy in Keytab File` and `Create Keytabs Directory` kerberos tasks
+* Removed `arc-four-hmac rc4-hmac` from Kerberos algorithms
 
 ### What works and what does not
 What works out of the box:

@@ -224,6 +224,7 @@
   with_items: "{{ kafka_broker_final_properties['log.dirs'].split(',') }}"
   tags:
     - filesystem
+    - privileged
 
 - name: Set Permissions on Data Dir files  # noqa no-free-form
   # Have to use command + chown instead of the Ansible file module here as it seems
@@ -234,6 +235,7 @@
   with_items: "{{ kafka_broker_final_properties['log.dirs'].split(',') }}"
   tags:
     - filesystem
+    - privileged
 
 - name: Create Kafka Broker Config directory
   file:
