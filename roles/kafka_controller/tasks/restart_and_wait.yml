@@ -6,7 +6,7 @@
     state: restarted
   tags:
     - systemd
-    - privileged
+  when: not nonroot_deployment
 
 - name: Stop Kafka Controller (Shell Script)
   ansible.builtin.shell: "{{ start_script_path }}/kafka_controller_stop.sh"
