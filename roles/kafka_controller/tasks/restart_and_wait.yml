@@ -25,4 +25,3 @@
 - name: Wait for Kafka Controller to Start
   wait_for:
     timeout: 10
-  when: nonroot_deployment

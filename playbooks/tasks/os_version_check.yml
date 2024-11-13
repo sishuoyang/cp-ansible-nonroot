@@ -16,7 +16,7 @@
 - name: Gather inventory_hostname and os_version_fact for each host
   set_fact:
     os_versions_all_hosts: "{{ (os_versions_all_hosts | default([])) + [{'inventory_hostname': item, 'os_version_fact': hostvars[item].os_version_fact}] }}"
-  loop: "{{ groups['kafka_broker'] }}"
+  loop: "{{ groups[target_hosts | string] }}"
   run_once: true
   delegate_to: localhost
   tags: os_check

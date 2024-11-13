@@ -17,7 +17,7 @@
 - name: Gather inventory_hostname and cpu_info_fact for each host
   set_fact:
     cpu_info_all_hosts: "{{ (cpu_info_all_hosts | default([])) + [{'inventory_hostname': item, 'cpu_info_fact': hostvars[item].cpu_info_fact}] }}"
-  loop: "{{ groups['kafka_broker'] }}"
+  loop: "{{ groups[target_hosts | string] }}"
   run_once: true
   delegate_to: localhost
   tags: cpu_check

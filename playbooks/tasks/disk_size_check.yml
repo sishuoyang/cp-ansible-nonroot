@@ -16,7 +16,7 @@
 - name: Gather inventory_hostname and disk_capacity_fact for each host
   set_fact:
     disk_capacities_all_hosts: "{{ (disk_capacities_all_hosts | default([])) + [{'inventory_hostname': item, 'disk_capacity_fact': hostvars[item].disk_capacity_fact}] }}"
-  loop: "{{ groups['kafka_broker'] }}"
+  loop: "{{ groups[target_hosts | string] }}"
   run_once: true
   delegate_to: localhost
   tags: disk_check
