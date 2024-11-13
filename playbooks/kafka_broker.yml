@@ -29,6 +29,10 @@
               state: "{{ 'running' if kafka_process_check.stdout else 'stopped' }}"
       when: nonroot_deployment
 
+    - name: Show Kafka service state based on process detection
+      debug:
+        msg: "State: {{ kafka_broker_service_name + '.service' }}: {{ ansible_facts.services[kafka_broker_service_name + '.service'].state"
+
     - name: Determine Installation Pattern - Parallel or Serial
       set_fact:
         install_pattern: "{{ 'parallel' if service_state != 'running' or kafka_broker_deployment_strategy == 'parallel' else 'serial' }}"
