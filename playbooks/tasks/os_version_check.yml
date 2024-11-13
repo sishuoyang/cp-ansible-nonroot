@@ -1,0 +1,53 @@
+---
+# Step 1: Collect OS version
+- name: Collect OS version
+  ansible.builtin.command: cat /etc/os-release
+  register: os_version
+  ignore_errors: yes
+  tags: os_check
+
+# Step 2: Set OS version fact per host
+- name: Set OS version fact per host
+  set_fact:
+    os_version_fact: "{{ os_version.stdout }}"
+  tags: os_check
+
+# Step 3: Gather inventory_hostname and os_version_fact for each host
+- name: Gather inventory_hostname and os_version_fact for each host
+  set_fact:
+    os_versions_all_hosts: "{{ (os_versions_all_hosts | default([])) + [{'inventory_hostname': item, 'os_version_fact': hostvars[item].os_version_fact}] }}"
+  loop: "{{ groups['kafka_brokers'] }}"
+  run_once: true
+  delegate_to: localhost
+  tags: os_check
+
+# Step 4: Debug the collected os_versions_all_hosts for verification
+- name: Debug collected os_versions_all_hosts
+  debug:
+    var: os_versions_all_hosts
+  run_once: true
+  delegate_to: localhost
+  tags: os_check
+
+# Step 5: Flag differences in OS versions based on uniqueness
+- name: Flag differences in OS versions
+  fail:
+    msg: |
+      Warning: OS version difference detected across hosts.
+      The following OS versions were found:
+      {% for host_info in os_versions_all_hosts %}
+        - Host: {{ host_info.inventory_hostname }}, OS Version: {{ host_info.os_version_fact }}
+      {% endfor %}
+  when: os_versions_all_hosts | map(attribute='os_version_fact') | unique | length > 1
+  run_once: true
+  delegate_to: localhost
+  tags: os_check
+
+# Step 6: Task to print message if OS versions are the same
+- name: All hosts have the same OS version
+  debug:
+    msg: "All hosts have the same OS version: {{ os_versions_all_hosts[0].os_version_fact }}"
+  when: os_versions_all_hosts | map(attribute='os_version_fact') | unique | length == 1
+  run_once: true
+  delegate_to: localhost
+  tags: os_check

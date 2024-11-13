@@ -1,0 +1,12 @@
+---
+- name: Kafka Disaster Recovery Playbook
+  tasks:
+    - import_tasks: tasks/file_check.yml
+    - import_tasks: tasks/health_check.yml
+    - import_tasks: tasks/java_version_check.yml
+    - import_tasks: tasks/os_version_check.yml
+    - import_tasks: tasks/disk_size_check.yml
+    - import_tasks: tasks/memory_size_check.yml
+    - import_tasks: tasks/cpu_info_check.yml
+    - import_tasks: tasks/file_fetch.yml
+    - import_tasks: tasks/prop_compare.yml

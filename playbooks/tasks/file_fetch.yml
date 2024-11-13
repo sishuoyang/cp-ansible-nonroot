@@ -1,0 +1,76 @@
+---
+# - name: Clean local 'remote-files' folder
+#   ansible.builtin.shell: |
+#     rm -rf ./remote-files/*
+#   delegate_to: localhost
+#   run_once: true
+#   tags: file_fetch
+
+# Back up the file on the remote server
+- name: Back up the server file on the remote server with original ownership
+  ansible.builtin.shell: "cp --preserve=mode,ownership {{ file_fetch_path }} {{ file_fetch_path }}.backup_$(date +'%Y%m%d_%H%M%S')"
+  tags: file_fetch
+
+- name: Ensure destination directory exists on control node
+  ansible.builtin.file:
+    path: "./remote-files/{{ inventory_hostname }}"
+    state: directory
+    mode: '0777'
+  delegate_to: localhost
+  tags: file_fetch
+
+# Download the file to the Ansible control node (rename with prefix)
+- name: Download file to the control node
+  ansible.builtin.fetch:
+    src: "{{ file_fetch_path }}"
+    dest: "./remote-files/{{ inventory_hostname }}/"
+    flat: yes
+  tags: file_fetch
+
+- name: Rename the downloaded file with the server name prefix
+  ansible.builtin.shell: |
+    mv ./remote-files/{{ inventory_hostname }}/{{ file_fetch_path | basename }} ./remote-files/{{ inventory_hostname }}_{{ file_fetch_path | basename}} 
+    rm -r ./remote-files/{{ inventory_hostname }}
+  delegate_to: localhost
+  run_once: false
+  tags: file_fetch
+
+# File editing
+- name: Ensure custom properties are inserted/updated in the downloaded file
+  # debug:
+  #   msg: "path is ./remote-files/{{ inventory_hostname }}_{{ file_fetch_path | basename}}"
+  ansible.builtin.lineinfile:
+    path: "./remote-files/{{ inventory_hostname }}_{{ file_fetch_path | basename}}"
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+    state: present
+    create: no
+  loop: "{{ custom_properties | dict2items }}"
+  delegate_to: localhost
+  tags: file_edit
+  
+
+- name: Display output of grep command for each custom property
+  ansible.builtin.shell: |
+    cat ./remote-files/{{ inventory_hostname }}_{{ file_fetch_path | basename }} | grep '{{ item.key }}'
+  loop: "{{ custom_properties | dict2items }}"
+  delegate_to: localhost
+  tags: file_edit
+  register: grep_output
+  ignore_errors: yes  # In case the grep command doesn't find a match, avoid task failure
+
+- name: Show output for each grep command result
+  debug:
+    msg: "{{ item.stdout_lines }}"
+  loop: "{{ grep_output.results }}"
+  loop_control:
+    label: "{{ item.item.key }}"  # Label to indicate which property key the output belongs to
+  tags: file_edit
+
+# Step 3: Upload the renamed file back to the corresponding server with original name
+- name: Upload the file back to the corresponding server with original name
+  ansible.builtin.copy:
+    src: "./remote-files/{{ inventory_hostname }}_{{ file_fetch_path | basename}}"
+    dest: "{{ file_fetch_path }}"
+  tags: file_push
+

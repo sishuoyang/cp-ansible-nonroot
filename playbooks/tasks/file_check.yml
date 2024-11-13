@@ -1,0 +1,20 @@
+- name: Check if Kafka files exist on remote server
+  stat:
+    path: "{{ item }}"
+  loop: "{{ kafka_files }}"
+  register: kafka_file_check
+  ignore_errors: yes
+  tags: file_check
+
+- name: Display the result of file existence check
+  debug:
+    msg: "{{ item }} exists: {{ kafka_file_check.results | selectattr('item', 'equalto', item) | map(attribute='stat.exists') | first }}"
+  loop: "{{ kafka_files }}"
+  tags: file_check
+
+- name: Display warning if a file does not exist
+  fail:
+    msg: "Error: {{ item }} does not exist"
+  loop: "{{ kafka_files }}"
+  when: not (kafka_file_check.results | selectattr('item', 'equalto', item) | map(attribute='stat.exists') | first)
+  tags: file_check

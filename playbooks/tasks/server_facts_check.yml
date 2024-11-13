@@ -1,0 +1,109 @@
+---
+# - name: Collect OS version
+#   ansible.builtin.command: cat /etc/os-release
+#   register: os_info
+#   tags: server_facts
+
+- name: Collect Java version
+  ansible.builtin.command: "{{ java_home }} -version"
+  register: java_version
+  ignore_errors: yes
+  tags: server_facts
+
+# - name: Get disk size where Kafka data directory is mounted
+#   ansible.builtin.command: df -h {{ kafka_data_dir }}
+#   register: disk_size
+#   tags: server_facts
+
+# - name: Gather CPU information
+#   ansible.builtin.command: lscpu
+#   register: cpu_info
+#   tags: server_facts
+
+# - name: Gather memory information
+#   ansible.builtin.command: free -h
+#   register: memory_info
+#   tags: server_facts
+
+# Set the facts for easier reference and comparison
+# - name: Set OS version fact
+#   set_fact:
+#     os_version_fact: "{{ os_info.stdout }}"
+#   tags: server_facts
+
+- name: Set Java version fact
+  set_fact:
+    java_version_fact: "{{ java_version.stderr }}"
+  tags: server_facts
+
+# - name: Set disk size fact
+#   set_fact:
+#     disk_size_fact: "{{ disk_size.stdout }}"
+#   tags: server_facts
+
+# - name: Set CPU info fact
+#   set_fact:
+#     cpu_info_fact: "{{ cpu_info.stdout }}"
+#   tags: server_facts
+
+# - name: Set memory size fact
+#   set_fact:
+#     memory_info_fact: "{{ memory_info.stdout }}"
+#   tags: server_facts
+
+# Ensure all previous tasks have completed and facts are fully gathered for each host
+- name: Ensure all facts are fully gathered
+  ansible.builtin.meta: flush_handlers
+  tags: server_facts
+
+# Gather all host facts into one variable for comparison
+- name: Collect facts for all hosts
+  set_fact:
+    all_host_facts: "{{ groups['kafka_brokers'] | map('extract', hostvars) | list }}"
+  delegate_to: localhost
+  run_once: true
+  tags: server_facts
+
+# Debug the OS versions collected from all hosts
+- name: Debug server facts from all hosts
+  debug:
+    msg: "All OS versions: {{ all_host_facts | map(attribute='java_version_fact') | unique }}"
+  tags: server_facts
+
+# Write all_host_facts to a file on the control node
+# - name: Write host facts to a file
+#   copy:
+#     content: "{{ all_host_facts | to_nice_json }}"
+#     dest: "./debug/facts_output_.json"
+#   tags: server_facts  
+
+# Perform comparison
+# - name: Flag differences in OS versions
+#   debug:
+#     msg: "Warning: OS version difference detected on {{ inventory_hostname }}: {{ os_version_fact }}"
+#   when: os_version_fact not in all_host_facts | map(attribute='os_version_fact') | unique
+#   tags: server_facts
+
+- name: Flag differences in Java versions
+  debug:
+    msg: "Warning: Java version difference detected on {{ inventory_hostname }}: {{ java_version_fact }}"
+  when: java_version_fact not in all_host_facts | map(attribute='java_version_fact') | unique
+  tags: server_facts
+
+# - name: Flag differences in disk sizes
+#   debug:
+#     msg: "Warning: Disk size difference detected on {{ inventory_hostname }}: {{ disk_size_fact }}"
+#   when: disk_size_fact not in all_host_facts | map(attribute='disk_size_fact') | unique
+#   tags: server_facts
+
+# - name: Flag differences in CPU information
+#   debug:
+#     msg: "Warning: CPU info difference detected on {{ inventory_hostname }}: {{ cpu_info_fact }}"
+#   when: cpu_info_fact not in all_host_facts | map(attribute='cpu_info_fact') | unique
+#   tags: server_facts
+
+# - name: Flag differences in memory sizes
+#   debug:
+#     msg: "Warning: Memory size difference detected on {{ inventory_hostname }}: {{ memory_info_fact }}"
+#   when: memory_info_fact not in all_host_facts | map(attribute='memory_info_fact') | unique
+#   tags: server_facts

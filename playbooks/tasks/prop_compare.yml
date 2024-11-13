@@ -1,0 +1,15 @@
+---
+# Step 1: Run the Python helper script for comparison
+- name: Compare Kafka server property files
+  ansible.builtin.command: "python3 ./utils/compare_properties.py '{{ ignored_keys }}'"
+  delegate_to: localhost
+  register: comparison_output
+  run_once: true
+  tags: prop_compare
+
+# Step 2: Display the comparison results as an array of lines
+- name: Show property comparison results
+  debug:
+    msg: "{{ comparison_output.stdout | from_json }}"
+  run_once: true
+  tags: prop_compare

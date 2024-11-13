@@ -1,0 +1,53 @@
+---
+# Step 1: Collect total memory capacity
+- name: Collect total memory capacity
+  ansible.builtin.shell: "free -h | awk '/^Mem:/ {print $2}'"
+  register: memory_capacity
+  ignore_errors: yes
+  tags: memory_check
+
+# Step 2: Set memory capacity fact per host
+- name: Set memory capacity fact per host
+  set_fact:
+    memory_capacity_fact: "{{ memory_capacity.stdout }}"
+  tags: memory_check
+
+# Step 3: Gather inventory_hostname and memory_capacity_fact for each host
+- name: Gather inventory_hostname and memory_capacity_fact for each host
+  set_fact:
+    memory_capacities_all_hosts: "{{ (memory_capacities_all_hosts | default([])) + [{'inventory_hostname': item, 'memory_capacity_fact': hostvars[item].memory_capacity_fact}] }}"
+  loop: "{{ groups['kafka_brokers'] }}"
+  run_once: true
+  delegate_to: localhost
+  tags: memory_check
+
+# Step 4: Debug the collected memory_capacities_all_hosts for verification
+- name: Debug collected memory_capacities_all_hosts
+  debug:
+    var: memory_capacities_all_hosts
+  run_once: true
+  delegate_to: localhost
+  tags: memory_check
+
+# Step 5: Flag differences in memory capacity based on uniqueness
+- name: Flag differences in memory capacity
+  fail:
+    msg: |
+      Warning: Memory capacity difference detected across hosts.
+      The following memory capacities were found:
+      {% for host_info in memory_capacities_all_hosts %}
+        - Host: {{ host_info.inventory_hostname }}, Memory Capacity: {{ host_info.memory_capacity_fact }}
+      {% endfor %}
+  when: memory_capacities_all_hosts | map(attribute='memory_capacity_fact') | unique | length > 1
+  run_once: true
+  delegate_to: localhost
+  tags: memory_check
+
+# Step 6: Task to print message if memory capacities are the same
+- name: All hosts have the same memory capacity
+  debug:
+    msg: "All hosts have the same memory capacity: {{ memory_capacities_all_hosts[0].memory_capacity_fact }}"
+  when: memory_capacities_all_hosts | map(attribute='memory_capacity_fact') | unique | length == 1
+  run_once: true
+  delegate_to: localhost
+  tags: memory_check

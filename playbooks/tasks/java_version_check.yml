@@ -1,0 +1,59 @@
+---
+- name: Collect Java version
+  ansible.builtin.command: "{{ java_home }} -version"
+  register: java_version
+  ignore_errors: yes
+  tags: java_check
+
+- name: Set Java version fact per host
+  set_fact:
+    java_version_fact: "{{ java_version.stderr }}"
+  tags: java_check
+
+- name: Gather inventory_hostname and java_version_fact for each host
+  # debug:
+  #   msg: "item is {{ item }}, hostvars[item].java_version_fact is {{hostvars[item].java_version_fact}}"
+  set_fact:
+    java_versions_all_hosts: "{{ (java_versions_all_hosts | default([])) + [{'inventory_hostname': item, 'java_version_fact': hostvars[item].java_version_fact}] }}"
+  loop: "{{ groups['kafka_brokers'] }}"
+  run_once: true
+  delegate_to: localhost
+  tags: java_check
+
+# Step 4: Print the collected java_versions_all_hosts for debugging
+- name: Debug collected java_versions_all_hosts
+  debug:
+    var: java_versions_all_hosts
+  run_once: true
+  delegate_to: localhost
+  tags: java_check
+
+# Debugging to check the Java versions collected from all hosts
+# - name: Debug collected Java versions
+#   debug:
+#     msg: "Java versions for all hosts: {{ java_versions_all_hosts_shared }}"
+#   tags: java_check
+
+# Flag differences in Java versions based on uniqueness
+- name: Flag differences in Java versions
+  fail:
+    msg: |
+      Warning: Java version difference detected across hosts.
+      The following Java versions were found:
+      {% for host_info in java_versions_all_hosts %}
+        - Host: {{ host_info.inventory_hostname }}, Java Version: {{ host_info.java_version_fact }}
+      {% endfor %}
+  when: java_versions_all_hosts | map(attribute='java_version_fact') | unique | length > 1
+  run_once: true
+  delegate_to: localhost
+  tags: java_check
+
+
+# Task to print message if Java versions are the same
+- name: All hosts have the same Java version
+  debug:
+    msg: "All hosts have the same Java version: {{ java_versions_all_hosts[0].java_version_fact }}"
+  when: java_versions_all_hosts | map(attribute='java_version_fact') | unique | length == 1
+  run_once: true
+  delegate_to: localhost
+  tags: java_check

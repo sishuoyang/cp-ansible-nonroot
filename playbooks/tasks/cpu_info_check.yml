@@ -1,0 +1,54 @@
+---
+# Step 1: Collect CPU information
+- name: Collect CPU information
+  # ansible.builtin.shell: "lscpu | grep '^CPU(s):' | awk '{print $2}'"
+  ansible.builtin.shell: "lscpu | grep -v 'Flags'"
+  register: cpu_info
+  ignore_errors: yes
+  tags: cpu_check
+
+# Step 2: Set CPU info fact per host
+- name: Set CPU info fact per host
+  set_fact:
+    cpu_info_fact: "{{ cpu_info.stdout }}"
+  tags: cpu_check
+
+# Step 3: Gather inventory_hostname and cpu_info_fact for each host
+- name: Gather inventory_hostname and cpu_info_fact for each host
+  set_fact:
+    cpu_info_all_hosts: "{{ (cpu_info_all_hosts | default([])) + [{'inventory_hostname': item, 'cpu_info_fact': hostvars[item].cpu_info_fact}] }}"
+  loop: "{{ groups['kafka_brokers'] }}"
+  run_once: true
+  delegate_to: localhost
+  tags: cpu_check
+
+# Step 4: Debug the collected cpu_info_all_hosts for verification
+- name: Debug collected cpu_info_all_hosts
+  debug:
+    var: cpu_info_all_hosts
+  run_once: true
+  delegate_to: localhost
+  tags: cpu_check
+
+# Step 5: Flag differences in CPU information based on uniqueness
+- name: Flag differences in CPU information
+  fail:
+    msg: |
+      Warning: CPU information difference detected across hosts.
+      The following CPU information was found:
+      {% for host_info in cpu_info_all_hosts %}
+        - Host: {{ host_info.inventory_hostname }}, CPU(s): {{ host_info.cpu_info_fact }}
+      {% endfor %}
+  when: cpu_info_all_hosts | map(attribute='cpu_info_fact') | unique | length > 1
+  run_once: true
+  delegate_to: localhost
+  tags: cpu_check
+
+# Step 6: Task to print message if CPU information is the same
+- name: All hosts have the same CPU information
+  debug:
+    msg: "All hosts have the same CPU(s): {{ cpu_info_all_hosts[0].cpu_info_fact }}"
+  when: cpu_info_all_hosts | map(attribute='cpu_info_fact') | unique | length == 1
+  run_once: true
+  delegate_to: localhost
+  tags: cpu_check

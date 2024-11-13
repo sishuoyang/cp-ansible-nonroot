@@ -1,0 +1,53 @@
+---
+# Step 1: Collect disk capacity for kafka_data_dir
+- name: Collect disk capacity for kafka_data_dir
+  ansible.builtin.shell: "df -h {{ kafka_data_dir }} | awk 'NR==2 {print $2}'"
+  register: disk_capacity
+  ignore_errors: yes
+  tags: disk_check
+
+# Step 2: Set disk capacity fact per host
+- name: Set disk capacity fact per host
+  set_fact:
+    disk_capacity_fact: "{{ disk_capacity.stdout }}"
+  tags: disk_check
+
+# Step 3: Gather inventory_hostname and disk_capacity_fact for each host
+- name: Gather inventory_hostname and disk_capacity_fact for each host
+  set_fact:
+    disk_capacities_all_hosts: "{{ (disk_capacities_all_hosts | default([])) + [{'inventory_hostname': item, 'disk_capacity_fact': hostvars[item].disk_capacity_fact}] }}"
+  loop: "{{ groups['kafka_brokers'] }}"
+  run_once: true
+  delegate_to: localhost
+  tags: disk_check
+
+# Step 4: Debug the collected disk_capacities_all_hosts for verification
+- name: Debug collected disk_capacities_all_hosts
+  debug:
+    var: disk_capacities_all_hosts
+  run_once: true
+  delegate_to: localhost
+  tags: disk_check
+
+# Step 5: Flag differences in disk capacity based on uniqueness
+- name: Flag differences in disk capacity
+  fail:
+    msg: |
+      Warning: Disk capacity difference detected across hosts.
+      The following disk capacities were found for {{ kafka_data_dir }}:
+      {% for host_info in disk_capacities_all_hosts %}
+        - Host: {{ host_info.inventory_hostname }}, Disk Capacity: {{ host_info.disk_capacity_fact }}
+      {% endfor %}
+  when: disk_capacities_all_hosts | map(attribute='disk_capacity_fact') | unique | length > 1
+  run_once: true
+  delegate_to: localhost
+  tags: disk_check
+
+# Step 6: Task to print message if disk capacities are the same
+- name: All hosts have the same disk capacity for kafka_data_dir
+  debug:
+    msg: "All hosts have the same disk capacity for {{ kafka_data_dir }}: {{ disk_capacities_all_hosts[0].disk_capacity_fact }}"
+  when: disk_capacities_all_hosts | map(attribute='disk_capacity_fact') | unique | length == 1
+  run_once: true
+  delegate_to: localhost
+  tags: disk_check
