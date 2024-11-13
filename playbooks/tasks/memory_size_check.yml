@@ -16,7 +16,7 @@
 - name: Gather inventory_hostname and memory_capacity_fact for each host
   set_fact:
     memory_capacities_all_hosts: "{{ (memory_capacities_all_hosts | default([])) + [{'inventory_hostname': item, 'memory_capacity_fact': hostvars[item].memory_capacity_fact}] }}"
-  loop: "{{ groups['kafka_brokers'] }}"
+  loop: "{{ groups['kafka_broker'] }}"
   run_once: true
   delegate_to: localhost
   tags: memory_check

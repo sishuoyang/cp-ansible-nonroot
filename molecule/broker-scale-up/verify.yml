@@ -27,7 +27,7 @@
         property: listeners
         expected_value: "{{kafka_controller_listeners['controller']['name']}}://:{{kafka_controller_listeners['controller']['port']}}"
 
-- name: Verify - kafka_brokers
+- name: Verify - kafka_broker
   hosts: kafka_broker
   gather_facts: false
   tasks:

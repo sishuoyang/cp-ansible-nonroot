@@ -59,7 +59,7 @@
 # Gather all host facts into one variable for comparison
 - name: Collect facts for all hosts
   set_fact:
-    all_host_facts: "{{ groups['kafka_brokers'] | map('extract', hostvars) | list }}"
+    all_host_facts: "{{ groups['kafka_broker'] | map('extract', hostvars) | list }}"
   delegate_to: localhost
   run_once: true
   tags: server_facts

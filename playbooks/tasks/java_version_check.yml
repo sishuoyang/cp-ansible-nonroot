@@ -15,7 +15,7 @@
   #   msg: "item is {{ item }}, hostvars[item].java_version_fact is {{hostvars[item].java_version_fact}}"
   set_fact:
     java_versions_all_hosts: "{{ (java_versions_all_hosts | default([])) + [{'inventory_hostname': item, 'java_version_fact': hostvars[item].java_version_fact}] }}"
-  loop: "{{ groups['kafka_brokers'] }}"
+  loop: "{{ groups['kafka_broker'] }}"
   run_once: true
   delegate_to: localhost
   tags: java_check
