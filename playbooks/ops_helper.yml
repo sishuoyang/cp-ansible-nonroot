@@ -1,5 +1,6 @@
 ---
 - name: Kafka Disaster Recovery Playbook
+  hosts: {{ target_hosts }}
   tasks:
     - import_tasks: tasks/file_check.yml
     - import_tasks: tasks/health_check.yml
