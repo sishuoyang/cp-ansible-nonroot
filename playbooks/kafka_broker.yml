@@ -15,7 +15,7 @@
     # Check for Kafka process regardless of systemd or custom script
     - name: Check if Kafka process is running
       ansible.builtin.shell: |
-        ps aux | grep -w '[k]afka.Kafka' || true
+        ps aux | grep -w '[k]afka.Kafka' | grep -v 'grep' || true
       register: kafka_process_check
       ignore_errors: true
       when: nonroot_deployment
@@ -24,14 +24,12 @@
     - name: Set Kafka service state based on process detection
       set_fact:
         ansible_facts:
-          services:
-            "{{ kafka_broker_service_name + '.service' }}":
-              state: "{{ 'running' if kafka_process_check.stdout else 'stopped' }}"
+          services: "{{ ansible_facts.services | default({}) | combine({ (kafka_broker_service_name + '.service'): { 'state': 'running' if kafka_process_check.stdout else 'stopped' } }) }}"
       when: nonroot_deployment
 
     - name: Show Kafka service state based on process detection
       debug:
-        msg: "State: {{ kafka_broker_service_name + '.service' }}: {{ ansible_facts.services[kafka_broker_service_name + '.service'].state"
+        msg: "State: {{ ansible_facts.services}}"
 
     - name: Determine Installation Pattern - Parallel or Serial
       set_fact:

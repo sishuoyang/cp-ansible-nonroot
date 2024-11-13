@@ -10,6 +10,26 @@
 
     - name: Populate service facts
       service_facts:
+      when: not nonroot_deployment
+
+    # Check for Zookeeper process regardless of systemd or custom script
+    - name: Check if Zookeeper process is running
+      ansible.builtin.shell: |
+        ps aux | grep -w 'zookeeper.server' | grep -v "grep" || true
+      register: kafka_process_check
+      ignore_errors: true
+      when: nonroot_deployment
+
+    # Set service state based on process check
+    - name: Set Zookeeper service state based on process detection
+      set_fact:
+        ansible_facts:
+          services: "{{ ansible_facts.services | default({}) | combine({ (zookeeper_service_name + '.service'): { 'state': 'running' if kafka_process_check.stdout else 'stopped' } }) }}"
+      when: nonroot_deployment
+
+    - name: Show Zookeeper service state based on process detection
+      debug:
+        msg: "State: {{ ansible_facts.services}}"
 
     - name: Determine Installation Pattern - Parallel or Serial
       set_fact:
