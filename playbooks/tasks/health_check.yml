@@ -1,7 +1,7 @@
 - name: Run connection test (telnet)
   shell: curl -v --connect-timeout 3 {{ ansible_host }}:{{ telnet_port }} 2>&1
   register: curl_output
-  ignore_errors: yes
+  ignore_errors: true
   tags: telnet
 
 - name: Check if the connection was successful
@@ -14,7 +14,7 @@
   shell: |
     ps -eo pid,etime,cmd | grep -v grep | grep kafka.Kafka | awk '{print $2}'
   register: kafka_uptime
-  ignore_errors: yes
+  ignore_errors: true
   tags: kafka_uptime
 
 - name: Display Kafka process uptime
@@ -26,7 +26,7 @@
 - name: Get active controller node
   shell: curl {{ ansible_host }}:{{ kafka_jmx_metric_port }}/metrics | grep activecontrollercount | grep -v '^#' | awk '{print $2}'
   register: active_controller_node
-  ignore_errors: yes
+  ignore_errors: true
   tags: jmx_metrics
 
 - name: Display active controller node

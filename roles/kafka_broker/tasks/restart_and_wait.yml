@@ -12,17 +12,30 @@
   ansible.builtin.shell: "{{ start_script_path }}/kafka_broker_stop.sh"
   when: nonroot_deployment
   ignore_errors: true
+  register: stop_output
 
-- name: Wait for Kafka Broker to Stop
-  wait_for:
-    timeout: 10
+- name: Check Kafka Broker Stopped
+  ansible.builtin.command: pgrep -f 'kafka\.Kafka'
+  register: kafka_process_check
+  retries: 5
+  delay: 10
+  until: kafka_process_check.rc != 0
   when: nonroot_deployment
+  ignore_errors: true
+  failed_when: kafka_process_check.rc == 0
+  tags: kafka_check
 
 - name: Start Kafka Broker (Shell Script)
   ansible.builtin.shell: "{{ start_script_path }}/kafka_broker_start.sh"
-  when: nonroot_deployment 
+  when: nonroot_deployment
+  register: start_output
 
-- name: Startup Delay
-  wait_for:
-    timeout: "{{ kafka_broker_health_check_delay }}"
-
+- name: Wait for Kafka Broker to Start
+  ansible.builtin.command: pgrep -f 'kafka\.Kafka'
+  register: kafka_process_check_start
+  retries: 10
+  delay: 10
+  until: kafka_process_check_start.rc == 0
+  when: nonroot_deployment
+  failed_when: kafka_process_check_start.rc != 0
+  tags: kafka_check
